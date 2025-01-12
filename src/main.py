@@ -2,7 +2,7 @@ import sys
 
 sys.path.append("gui/")
 
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtWidgets import QApplication
 from gui.mainwindow import MainWindow
 
 

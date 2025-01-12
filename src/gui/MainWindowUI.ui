@@ -40,27 +40,16 @@
            <number>5</number>
           </property>
           <item>
-           <layout class="QHBoxLayout" name="ResizeImage">
+           <layout class="QHBoxLayout" name="Model" stretch="1,2">
             <item>
-             <widget class="QLabel" name="text_resize">
+             <widget class="QLabel" name="text_model">
               <property name="text">
-               <string>Resize Image:</string>
+               <string>Model:</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="width">
-              <property name="placeholderText">
-               <string>width</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="height">
-              <property name="placeholderText">
-               <string>height</string>
-              </property>
-             </widget>
+             <widget class="QComboBox" name="model"/>
             </item>
            </layout>
           </item>
@@ -219,18 +208,18 @@
          </layout>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="ButtonParameter">
+         <layout class="QHBoxLayout" name="ButtonModel">
           <item>
-           <widget class="QPushButton" name="LoadParameter">
+           <widget class="QPushButton" name="LoadModel">
             <property name="text">
-             <string>Load Parameter</string>
+             <string>Load Model</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QPushButton" name="Save">
             <property name="text">
-             <string>Save</string>
+             <string>Save Model</string>
             </property>
            </widget>
           </item>

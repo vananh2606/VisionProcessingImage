@@ -7,10 +7,11 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 import cv2 as cv
+import json
 from utils.control_camera import CameraThread
 from utils.image_converter import ImageConverter
 
-from MainWindowUI_ui import Ui_MainWindow
+from gui.MainWindowUI_ui import Ui_MainWindow
 
 
 class MainWindow(QMainWindow):
@@ -34,10 +35,6 @@ class MainWindow(QMainWindow):
 
     def _initialize_parameters(self):
         """Khởi tạo các tham số mặc định và options"""
-        # Resize parameters
-        self.ui.width.setText("1200")
-        self.ui.height.setText("900")
-
         # Blur parameters
         self.blur_types = ["Gaussian Blur", "Median Blur", "Average Blur"]
         self.ui.type_blur.addItems(self.blur_types)
@@ -86,18 +83,146 @@ class MainWindow(QMainWindow):
         self.ui.distance.setValue(15)
 
     def get_config(self) -> dict:
-        return
+        """Get current configuration from UI parameters"""
+        try:
+            config = {
+                # Blur parameters
+                "blur": {
+                    "type": self.ui.type_blur.currentText(),
+                    "ksize": self.ui.ksize.value()
+                },
+                # Threshold parameters
+                "threshold": {
+                    "adaptive_type": self.ui.type_adaptive_thresh.currentText(),
+                    "thresh_type": self.ui.type_thresh.currentText(),
+                    "block_size": self.ui.block_size.value(),
+                    "c_index": self.ui.c_index.value()
+                },
+                # Morphological parameters
+                "morphological": {
+                    "type": self.ui.morph.currentText(),
+                    "kernel_size": self.ui.kernel.value()
+                },
+                # Contour parameters
+                "contour": {
+                    "retrieval_mode": self.ui.retrieval_modes.currentText(),
+                    "approximation_mode": self.ui.contour_approximation_modes.currentText()
+                },
+                # Detection parameters
+                "detection": {
+                    "area_min": self.ui.area_min.text(),
+                    "area_max": self.ui.area_max.text(),
+                    "distance": self.ui.distance.value()
+                }
+            }
+            return config
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"Error getting configuration: {str(e)}")
+            return {}
 
     def set_config(self, config: dict):
-        pass
+        """Apply configuration to UI parameters"""
+        try:
+            # Blur parameters
+            if "blur" in config:
+                blur_index = self.ui.type_blur.findText(config["blur"]["type"])
+                if blur_index >= 0:
+                    self.ui.type_blur.setCurrentIndex(blur_index)
+                self.ui.ksize.setValue(config["blur"]["ksize"])
+
+            # Threshold parameters
+            if "threshold" in config:
+                adaptive_index = self.ui.type_adaptive_thresh.findText(
+                    config["threshold"]["adaptive_type"]
+                )
+                if adaptive_index >= 0:
+                    self.ui.type_adaptive_thresh.setCurrentIndex(adaptive_index)
+                
+                thresh_index = self.ui.type_thresh.findText(
+                    config["threshold"]["thresh_type"]
+                )
+                if thresh_index >= 0:
+                    self.ui.type_thresh.setCurrentIndex(thresh_index)
+                
+                self.ui.block_size.setValue(config["threshold"]["block_size"])
+                self.ui.c_index.setValue(config["threshold"]["c_index"])
+
+            # Morphological parameters
+            if "morphological" in config:
+                morph_index = self.ui.morph.findText(config["morphological"]["type"])
+                if morph_index >= 0:
+                    self.ui.morph.setCurrentIndex(morph_index)
+                self.ui.kernel.setValue(config["morphological"]["kernel_size"])
+
+            # Contour parameters
+            if "contour" in config:
+                retrieval_index = self.ui.retrieval_modes.findText(
+                    config["contour"]["retrieval_mode"]
+                )
+                if retrieval_index >= 0:
+                    self.ui.retrieval_modes.setCurrentIndex(retrieval_index)
+                
+                approximation_index = self.ui.contour_approximation_modes.findText(
+                    config["contour"]["approximation_mode"]
+                )
+                if approximation_index >= 0:
+                    self.ui.contour_approximation_modes.setCurrentIndex(approximation_index)
+
+            # Detection parameters
+            if "detection" in config:
+                self.ui.area_min.setText(str(config["detection"]["area_min"]))
+                self.ui.area_max.setText(str(config["detection"]["area_max"]))
+                self.ui.distance.setValue(config["detection"]["distance"])
+
+            # Process image with new configuration
+            self.process_image()
+
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"Error setting configuration: {str(e)}")
 
     def save_config(self, config: dict, filename: str):
-        pass
+        """Save configuration to JSON file"""
+        try:
+            with open(filename, 'w') as f:
+                json.dump(config, f, indent=4)
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"Error saving configuration: {str(e)}")
+
+    # Add these methods to handle the Load and Save button clicks
+    def load_model_config(self):
+        """Load configuration from JSON file"""
+        try:
+            file_dialog = QFileDialog()
+            file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+            file_dialog.setNameFilter("JSON files (*.json)")
+
+            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
+                filename = file_dialog.selectedFiles()[0]
+                with open(filename, 'r') as f:
+                    config = json.load(f)
+                self.set_config(config)
+                QMessageBox.information(None, "Success", "Configuration loaded successfully")
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"Error loading configuration: {str(e)}")
+
+    def save_model_config(self):
+        """Save current configuration to JSON file"""
+        try:
+            file_dialog = QFileDialog()
+            file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+            file_dialog.setNameFilter("JSON files (*.json)")
+            file_dialog.setDefaultSuffix("json")
+
+            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
+                filename = file_dialog.selectedFiles()[0]
+                config = self.get_config()
+                self.save_config(config, filename)
+                QMessageBox.information(None, "Success", "Configuration saved successfully")
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"Error saving configuration: {str(e)}")
 
     def _connect_signals(self):
         # Kết nối các parameters với hàm xử lý
-        self.ui.width.textChanged.connect(self.process_image)
-        self.ui.height.textChanged.connect(self.process_image)
         self.ui.type_blur.currentIndexChanged.connect(self.process_image)
         self.ui.ksize.valueChanged.connect(self.process_image)
         self.ui.type_adaptive_thresh.currentIndexChanged.connect(self.process_image)
@@ -113,6 +238,9 @@ class MainWindow(QMainWindow):
         self.ui.area_min.textChanged.connect(self.process_image)
         self.ui.area_max.textChanged.connect(self.process_image)
         self.ui.distance.valueChanged.connect(self.process_image)
+
+        self.ui.LoadModel.clicked.connect(self.load_model_config)
+        self.ui.Save.clicked.connect(self.save_model_config)
         # self.process_image()
 
     def process_image(self):
@@ -121,6 +249,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
+            print(self.current_image.shape)
             # Convert to grayscale
             gray = cv.cvtColor(self.current_image, cv.COLOR_BGR2GRAY)
 
