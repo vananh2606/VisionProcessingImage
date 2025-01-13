@@ -12,6 +12,8 @@ import numpy as np
 import json
 import threading
 import time
+import os
+
 from utils.control_camera import CameraThread
 from utils.image_converter import ImageConverter
 
@@ -32,10 +34,12 @@ class MainWindow(QMainWindow):
         self.ui.Camera.clicked.connect(self.toggle_camera)
         self.ui.LoadImage.clicked.connect(self.load_image)
         self.ui.Capture.clicked.connect(self.capture_image)
-        self.ui.LoadModel.clicked.connect(self.load_model_config)
+        self.ui.AddModel.clicked.connect(self.add_model_config)
         self.ui.SaveModel.clicked.connect(self.save_model_config)
+        self.ui.model.currentIndexChanged.connect(self.load_model_config)
 
         self.showResultSignal.connect(self._update_ui)
+        self._update_model_list()  # Initialize model list
 
         # Thêm khởi tạo các giá trị mặc định và các loại xử lý
         self._initialize_parameters()
@@ -204,44 +208,133 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(None, "Error", f"Error saving configuration: {str(e)}")
 
-    # Add these methods to handle the Load and Save button clicks
-    def load_model_config(self):
-        """Load configuration from JSON file"""
+    def add_model_config(self):
+        """Add new model configuration"""
         try:
-            file_dialog = QFileDialog()
-            file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-            file_dialog.setNameFilter("JSON files (*.json)")
-
-            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
-                filename = file_dialog.selectedFiles()[0]
-                with open(filename, "r") as f:
-                    config = json.load(f)
-                self.set_config(config)
-                QMessageBox.information(
-                    None, "Success", "Configuration loaded successfully"
-                )
-        except Exception as e:
-            QMessageBox.critical(
-                None, "Error", f"Error loading configuration: {str(e)}"
+            # Get model name from user
+            model_name, ok = QInputDialog.getText(
+                self, "Add New Model", "Enter model name:", text="new_model"
             )
 
-    def save_model_config(self):
-        """Save current configuration to JSON file"""
-        try:
-            file_dialog = QFileDialog()
-            file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
-            file_dialog.setNameFilter("JSON files (*.json)")
-            file_dialog.setDefaultSuffix("json")
+            if ok and model_name:
+                # Create models directory if it doesn't exist
+                parent_dir = os.path.join("models")
+                os.makedirs(parent_dir, exist_ok=True)
 
-            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
-                filename = file_dialog.selectedFiles()[0]
+                # Create filename with .json extension
+                filename = f"{model_name}.json"
+                path = os.path.join(parent_dir, filename)
+
+                # Check if file already exists
+                if os.path.exists(path):
+                    QMessageBox.warning(
+                        self,
+                        "Warning",
+                        f"Model '{model_name}' already exists. Please choose a different name.",
+                    )
+                    return
+
+                # Get current configuration
                 config = self.get_config()
-                self.save_config(config, filename)
+
+                # Save configuration to new file
+                with open(path, "w") as f:
+                    json.dump(config, f, indent=4)
+
+                # Update model combobox
+                self._update_model_list()
+
+                # Select the newly added model
+                index = self.ui.model.findText(model_name)
+                if index >= 0:
+                    self.ui.model.setCurrentIndex(index)
+
                 QMessageBox.information(
-                    None, "Success", "Configuration saved successfully"
+                    self, "Success", f"New model '{model_name}' created successfully"
                 )
         except Exception as e:
-            QMessageBox.critical(None, "Error", f"Error saving configuration: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to create new model: {str(e)}")
+
+    def _update_model_list(self):
+        """Update the model combobox with available model configurations"""
+        try:
+            # Store current selection
+            current_model = self.ui.model.currentText()
+
+            # Clear current items
+            self.ui.model.clear()
+
+            # Get list of model files
+            parent_dir = os.path.join("models")
+            if os.path.exists(parent_dir):
+                model_files = [f for f in os.listdir(parent_dir) if f.endswith(".json")]
+                model_names = [os.path.splitext(f)[0] for f in model_files]
+                self.ui.model.addItems(sorted(model_names))
+
+                # Restore previous selection if it still exists
+                index = self.ui.model.findText(current_model)
+                if index >= 0:
+                    self.ui.model.setCurrentIndex(index)
+        except Exception as e:
+            print(f"Error updating model list: {str(e)}")
+
+    def load_model_config(self):
+        """Load configuration from selected model"""
+        try:
+            model_name = self.ui.model.currentText()
+            if not model_name:
+                QMessageBox.warning(self, "Warning", "Please select a model to load")
+                return
+
+            filename = os.path.join("models", f"{model_name}.json")
+
+            if not os.path.exists(filename):
+                QMessageBox.warning(
+                    self, "Warning", f"Model file not found: {filename}"
+                )
+                return
+
+            with open(filename, "r") as f:
+                config = json.load(f)
+
+            self.set_config(config)
+            QMessageBox.information(
+                self, "Success", f"Model '{model_name}' loaded successfully"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load model: {str(e)}")
+
+    def save_model_config(self):
+        """Save configuration to current model"""
+        try:
+            model_name = self.ui.model.currentText()
+            if not model_name:
+                QMessageBox.warning(self, "Warning", "Please select a model to save to")
+                return
+
+            filename = os.path.join("models", f"{model_name}.json")
+            config = self.get_config()
+
+            # Confirm overwrite if file exists
+            if os.path.exists(filename):
+                reply = QMessageBox.question(
+                    self,
+                    "Confirm Save",
+                    f"Model '{model_name}' already exists. Do you want to overwrite it?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+
+                if reply == QMessageBox.StandardButton.No:
+                    return
+
+            with open(filename, "w") as f:
+                json.dump(config, f, indent=4)
+
+            QMessageBox.information(
+                self, "Success", f"Model '{model_name}' saved successfully"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save model: {str(e)}")
 
     def start_loop_process(self):
         threading.Thread(target=self.thread_loop_process, daemon=True).start()
@@ -261,7 +354,7 @@ class MainWindow(QMainWindow):
             if self.b_stop:
                 break
 
-            time.sleep(0.005)
+            time.sleep(0.05)
 
     def process_image(self, mat=None, config: dict = None):
         start_time = time.time()
@@ -463,7 +556,7 @@ class MainWindow(QMainWindow):
     def capture_image(self):
         """Capture current frame or loaded image"""
         try:
-            if frame is None:
+            if self.camera_thread.frame is None:
                 QMessageBox.warning(
                     self,
                     "Warning",
@@ -485,7 +578,7 @@ class MainWindow(QMainWindow):
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 filename = file_dialog.selectedFiles()[0]
                 # Save the image
-                cv.imwrite(filename, frame)
+                cv.imwrite(filename, self.camera_thread.frame)
                 QMessageBox.information(
                     self, "Success", f"Image saved successfully to:\n{filename}"
                 )

@@ -1,6 +1,7 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 import sys
 import os
+import time
 
 sys.path.append("control_camera/")
 from control_camera.cameras.hik import HIK
@@ -20,6 +21,7 @@ class CameraThread(QThread):
             }
         )
         self.cap = None
+        self.frame = None
         self.running = False
 
     def run(self):
@@ -28,15 +30,18 @@ class CameraThread(QThread):
         if self.cap:
             self.running = True
             while self.running:
-                err, frame = self.camera.grab()
+                err, self.frame = self.camera.grab()
 
                 if err != NO_ERROR:
                     print("Camera error : ", err)
                     break
                 else:
-                    self.frameCaptured.emit(frame)
+                    self.frameCaptured.emit(self.frame)
+
+                time.sleep(0.05)
 
     def stop(self):
         self.running = False
         self.camera.stop_grabbing()
+        self.camera.close()
         self.wait()

@@ -210,9 +210,9 @@
         <item>
          <layout class="QHBoxLayout" name="ButtonModel">
           <item>
-           <widget class="QPushButton" name="LoadModel">
+           <widget class="QPushButton" name="AddModel">
             <property name="text">
-             <string>Load Model</string>
+             <string>Add Model</string>
             </property>
            </widget>
           </item>
