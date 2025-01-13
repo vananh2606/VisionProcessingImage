@@ -1,17 +1,17 @@
 {
     "blur": {
-        "type": "Median Blur",
+        "type": "Gaussian Blur",
         "ksize": 5
     },
     "threshold": {
-        "adaptive_type": "Mean",
+        "adaptive_type": "Gaussian",
         "thresh_type": "Binary",
-        "block_size": 125,
+        "block_size": 255,
         "c_index": 3
     },
     "morphological": {
         "type": "Erode",
-        "kernel_size": 3
+        "kernel_size": 5
     },
     "contour": {
         "retrieval_mode": "EXTERNAL",

@@ -118,7 +118,9 @@ class Ui_MainWindow(object):
         self.retrieval_modes = QtWidgets.QComboBox(parent=self.centralwidget)
         self.retrieval_modes.setObjectName("retrieval_modes")
         self.Contour.addWidget(self.retrieval_modes)
-        self.contour_approximation_modes = QtWidgets.QComboBox(parent=self.centralwidget)
+        self.contour_approximation_modes = QtWidgets.QComboBox(
+            parent=self.centralwidget
+        )
         self.contour_approximation_modes.setObjectName("contour_approximation_modes")
         self.Contour.addWidget(self.contour_approximation_modes)
         self.Contour.setStretch(0, 1)
@@ -170,9 +172,9 @@ class Ui_MainWindow(object):
         self.LoadModel = QtWidgets.QPushButton(parent=self.centralwidget)
         self.LoadModel.setObjectName("LoadModel")
         self.ButtonModel.addWidget(self.LoadModel)
-        self.Save = QtWidgets.QPushButton(parent=self.centralwidget)
-        self.Save.setObjectName("Save")
-        self.ButtonModel.addWidget(self.Save)
+        self.SaveModel = QtWidgets.QPushButton(parent=self.centralwidget)
+        self.SaveModel.setObjectName("SaveModel")
+        self.ButtonModel.addWidget(self.SaveModel)
         self.ConfigLayout.addLayout(self.ButtonModel)
         self.Button = QtWidgets.QVBoxLayout()
         self.Button.setObjectName("Button")
@@ -237,13 +239,15 @@ class Ui_MainWindow(object):
         self.text_type_morph.setText(_translate("MainWindow", "Type Morph"))
         self.text_kernel.setText(_translate("MainWindow", "Kernel"))
         self.text_type_retriecal.setText(_translate("MainWindow", "Retrieval "))
-        self.text_contour_approximation.setText(_translate("MainWindow", "Contour Approximation"))
+        self.text_contour_approximation.setText(
+            _translate("MainWindow", "Contour Approximation")
+        )
         self.text_area_min.setText(_translate("MainWindow", "Area Min"))
         self.text_area_max.setText(_translate("MainWindow", "Area Max"))
         self.text_distance.setText(_translate("MainWindow", "Distance"))
         self.LoadModel.setText(_translate("MainWindow", "Load Model"))
-        self.Save.setText(_translate("MainWindow", "Save Model"))
-        self.Camera.setText(_translate("MainWindow", "Open/Stop Camera"))
+        self.SaveModel.setText(_translate("MainWindow", "Save Model"))
+        self.Camera.setText(_translate("MainWindow", "Open Camera"))
         self.Capture.setText(_translate("MainWindow", "Capture"))
         self.LoadImage.setText(_translate("MainWindow", "Load Image"))
         self.OriginalImage.setText(_translate("MainWindow", "Original Image"))
@@ -254,6 +258,7 @@ class Ui_MainWindow(object):
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()

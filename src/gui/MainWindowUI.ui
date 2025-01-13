@@ -217,7 +217,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="Save">
+           <widget class="QPushButton" name="SaveModel">
             <property name="text">
              <string>Save Model</string>
             </property>
@@ -230,7 +230,7 @@
           <item>
            <widget class="QPushButton" name="Camera">
             <property name="text">
-             <string>Open/Stop Camera</string>
+             <string>Open Camera</string>
             </property>
            </widget>
           </item>
