@@ -1,3 +1,4 @@
+import shutil
 from PyQt6 import QtCore, QtGui, QtWidgets
 from PyQt6.QtWidgets import (
     QApplication,
@@ -30,24 +31,24 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        self.showResultSignal.connect(self._update_ui)
+
         """Kết nối các signals với slots"""
         self.ui.Camera.clicked.connect(self.toggle_camera)
         self.ui.LoadImage.clicked.connect(self.load_image)
         self.ui.Capture.clicked.connect(self.capture_image)
         self.ui.AddModel.clicked.connect(self.add_model_config)
         self.ui.SaveModel.clicked.connect(self.save_model_config)
+        self.ui.DeleteModel.clicked.connect(self.delete_model_config)
         self.ui.model.currentIndexChanged.connect(self.load_model_config)
-
-        self.showResultSignal.connect(self._update_ui)
-        self._update_model_list()  # Initialize model list
-
         # Thêm khởi tạo các giá trị mặc định và các loại xử lý
         self._initialize_parameters()
         self.b_stop = False
         self.camera_thread = None
         self.current_image = None
 
-        # Kết nối các signals
+        self._update_model_list()
+
         self.start_loop_process()
 
     def _initialize_parameters(self):
@@ -216,23 +217,26 @@ class MainWindow(QMainWindow):
                 self, "Add New Model", "Enter model name:", text="new_model"
             )
 
+            model_name = model_name.upper()
+
+            parent_dir = os.path.join("src/models", model_name)
+
             if ok and model_name:
-                # Create models directory if it doesn't exist
-                parent_dir = os.path.join("models")
-                os.makedirs(parent_dir, exist_ok=True)
-
-                # Create filename with .json extension
-                filename = f"{model_name}.json"
-                path = os.path.join(parent_dir, filename)
-
                 # Check if file already exists
-                if os.path.exists(path):
+                if os.path.exists(parent_dir):
                     QMessageBox.warning(
                         self,
                         "Warning",
                         f"Model '{model_name}' already exists. Please choose a different name.",
                     )
                     return
+
+                # Create models directory if it doesn't exist
+                os.makedirs(parent_dir, exist_ok=True)
+
+                # Create filename with .json extension
+                filename = "config.json"
+                path = os.path.join(parent_dir, filename)
 
                 # Get current configuration
                 config = self.get_config()
@@ -242,41 +246,47 @@ class MainWindow(QMainWindow):
                     json.dump(config, f, indent=4)
 
                 # Update model combobox
-                self._update_model_list()
+                self.ui.model.addItem(model_name)
+                self.ui.model.setCurrentText(model_name)
 
-                # Select the newly added model
-                index = self.ui.model.findText(model_name)
-                if index >= 0:
-                    self.ui.model.setCurrentIndex(index)
-
-                QMessageBox.information(
-                    self, "Success", f"New model '{model_name}' created successfully"
+                self.statusBar().showMessage(
+                    f"New model '{model_name}' created successfully", 5000
                 )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to create new model: {str(e)}")
 
-    def _update_model_list(self):
-        """Update the model combobox with available model configurations"""
+    def delete_model_config(self):
+        """Delete configuration to current model"""
         try:
-            # Store current selection
-            current_model = self.ui.model.currentText()
+            model_name = self.ui.model.currentText()
+            if not model_name:
+                QMessageBox.warning(self, "Warning", "Please select a model to delete")
+                return
 
-            # Clear current items
-            self.ui.model.clear()
+            dirname = os.path.join("src/models", model_name)
 
-            # Get list of model files
-            parent_dir = os.path.join("models")
-            if os.path.exists(parent_dir):
-                model_files = [f for f in os.listdir(parent_dir) if f.endswith(".json")]
-                model_names = [os.path.splitext(f)[0] for f in model_files]
-                self.ui.model.addItems(sorted(model_names))
+            # Xác nhận xóa file
+            reply = QMessageBox.question(
+                self,
+                "Confirm Delete",
+                f"Are you sure you want to delete the model '{model_name}'?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
 
-                # Restore previous selection if it still exists
-                index = self.ui.model.findText(current_model)
-                if index >= 0:
-                    self.ui.model.setCurrentIndex(index)
+            if reply == QMessageBox.StandardButton.No:
+                return
+
+            # Xóa thư mục
+            print(os.path.join("src/models", f"{model_name}"))
+            shutil.rmtree(os.path.join("src/models", model_name))
+
+            QMessageBox.information(
+                self, "Success", f"Model '{model_name}' deleted successfully"
+            )
+            self.ui.model.removeItem(self.ui.model.currentIndex())
+            self.load_model_config()
         except Exception as e:
-            print(f"Error updating model list: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to delete model: {str(e)}")
 
     def load_model_config(self):
         """Load configuration from selected model"""
@@ -286,7 +296,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Warning", "Please select a model to load")
                 return
 
-            filename = os.path.join("models", f"{model_name}.json")
+            filename = os.path.join("src/models", f"{model_name}", "config.json")
 
             if not os.path.exists(filename):
                 QMessageBox.warning(
@@ -298,8 +308,8 @@ class MainWindow(QMainWindow):
                 config = json.load(f)
 
             self.set_config(config)
-            QMessageBox.information(
-                self, "Success", f"Model '{model_name}' loaded successfully"
+            self.statusBar().showMessage(
+                f"Model '{model_name}' loaded successfully", 5000
             )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load model: {str(e)}")
@@ -312,7 +322,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Warning", "Please select a model to save to")
                 return
 
-            filename = os.path.join("models", f"{model_name}.json")
+            filename = os.path.join("src/models", f"{model_name}", "config.json")
             config = self.get_config()
 
             # Confirm overwrite if file exists
@@ -336,6 +346,26 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save model: {str(e)}")
 
+    def _update_model_list(self):
+        """Update the model combobox with available model configurations"""
+        try:
+            # Clear current items
+            self.ui.model.clear()
+            # Get list of model files
+            parent_dir = os.path.join("src/models")
+            if os.path.exists(parent_dir):
+                model_names = [
+                    f
+                    for f in os.listdir(parent_dir)
+                    if os.path.isdir(os.path.join(parent_dir, f))
+                ]
+                if model_names:
+                    self.ui.model.addItems(sorted(model_names))
+                    self.load_model_config()
+
+        except Exception as e:
+            print(f"Error updating model list: {str(e)}")
+
     def start_loop_process(self):
         threading.Thread(target=self.thread_loop_process, daemon=True).start()
 
@@ -343,7 +373,7 @@ class MainWindow(QMainWindow):
         self.b_stop = True
 
     def thread_loop_process(self):
-        self.b_stop = False
+        # self.b_stop = False
         while True:
             config = self.get_config()
             ret = self.process_image(mat=self.current_image, config=config)
@@ -379,7 +409,7 @@ class MainWindow(QMainWindow):
 
         # Update UI
         # self._update_ui(result, morph)
-        print("Techtime Process Image: ", time.time() - start_time)
+        # print("Techtime Process Image: ", time.time() - start_time)
         return result, morph
 
     def _apply_blur(self, image, config: dict):
@@ -532,6 +562,7 @@ class MainWindow(QMainWindow):
             self.camera_thread = CameraThread()
             self.camera_thread.frameCaptured.connect(self.update_frame)
             self.camera_thread.start()
+
         except Exception as e:
             QMessageBox.critical(
                 self, "Camera Error", f"Failed to start camera: {str(e)}"
@@ -585,13 +616,13 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to capture image: {str(e)}")
 
-    def load_image(self):
+    def load_image(self, image=None):
         """Load and process an image from file"""
         try:
             # Stop camera if running
             if self.camera_thread and self.camera_thread.isRunning():
-                self.stop_camera()
                 self.ui.Camera.setText("Open Camera")
+                self.stop_camera()
 
             file_dialog = QFileDialog()
             file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)

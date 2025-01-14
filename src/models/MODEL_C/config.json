@@ -1,25 +1,25 @@
 {
     "blur": {
         "type": "Gaussian Blur",
-        "ksize": 5
+        "ksize": 9
     },
     "threshold": {
         "adaptive_type": "Gaussian",
         "thresh_type": "Binary",
         "block_size": 125,
-        "c_index": 9
+        "c_index": -2
     },
     "morphological": {
         "type": "Erode",
-        "kernel_size": 9
+        "kernel_size": 5
     },
     "contour": {
         "retrieval_mode": "EXTERNAL",
         "approximation_mode": "NONE"
     },
     "detection": {
-        "area_min": "100000",
-        "area_max": "150000",
-        "distance": 20
+        "area_min": "4500",
+        "area_max": "9000",
+        "distance": 15
     }
 }

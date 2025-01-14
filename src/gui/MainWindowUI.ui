@@ -217,6 +217,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="DeleteModel">
+            <property name="text">
+             <string>Delete Model</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="SaveModel">
             <property name="text">
              <string>Save Model</string>
