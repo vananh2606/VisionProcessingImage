@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <layout class="QHBoxLayout" name="TeachingLayout" stretch="1,2">
+     <layout class="QHBoxLayout" name="TeachingLayout" stretch="1,2,1">
       <property name="spacing">
        <number>20</number>
       </property>
@@ -255,6 +255,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QPushButton" name="OpenFolder">
+            <property name="text">
+             <string>Open Folder</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
@@ -292,6 +299,13 @@
            <set>Qt::AlignCenter</set>
           </property>
          </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="ListFile">
+        <item>
+         <widget class="QListWidget" name="listWidgetFile"/>
         </item>
        </layout>
       </item>

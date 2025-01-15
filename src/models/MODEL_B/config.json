@@ -7,19 +7,19 @@
         "adaptive_type": "Gaussian",
         "thresh_type": "Binary",
         "block_size": 125,
-        "c_index": 9
+        "c_index": 11
     },
     "morphological": {
         "type": "Erode",
-        "kernel_size": 5
+        "kernel_size": 9
     },
     "contour": {
         "retrieval_mode": "EXTERNAL",
         "approximation_mode": "NONE"
     },
     "detection": {
-        "area_min": "4500",
-        "area_max": "9000",
+        "area_min": "100000",
+        "area_max": "150000",
         "distance": 15
     }
 }

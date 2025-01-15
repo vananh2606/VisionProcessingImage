@@ -1,3 +1,4 @@
+from PyQt6.QtWidgets import QLabel
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import Qt
 import cv2
@@ -56,7 +57,7 @@ class ImageConverter:
         Returns:
             QPixmap: The converted QPixmap.
         """
-        # Chuyển sang QImage 
+        # Chuyển sang QImage
         qimage = ImageConverter.opencv_to_qimage(cv_img)
 
         # Tạo QPixmap
@@ -72,39 +73,15 @@ class ImageConverter:
 
         return pixmap
 
-    @staticmethod
-    def qimage_to_opencv(qimage):
-        """
-        Convert a QImage to an OpenCV image.\n
-        Args:
-            qimage (QImage): The QImage to be converted.
-        Returns:
-            numpy.ndarray: The converted OpenCV image.
-        """
-        # Chuyển sang numpy array
-        width = qimage.width()
-        height = qimage.height()
-        bytes_per_line = qimage.bytesPerLine()
-        image_format = qimage.format()
-        ptr = qimage.bits()
-        ptr.setsize(qimage.byteCount())
-        cv_img = np.array(ptr).reshape(height, width, 4)
+    def smooth_label(self, label: QLabel, image: np.ndarray):
+        pixmap = ImageConverter.opencv_to_qpixmap(image, label.size())
 
-        return cv_img
+        # Calculate position to center the image
+        x = (label.size().width() - pixmap.width()) // 2
+        y = (label.size().height() - pixmap.height()) // 2
 
-    @staticmethod
-    def qpixmap_to_opencv(qpixmap):
-        """
-        Convert a QPixmap to an OpenCV image.\n
-        Args:
-            qpixmap (QPixmap): The QPixmap to be converted.
-        Returns:
-            numpy.ndarray: The converted OpenCV image.
-        """
-        # Chuyển sang QImage
-        qimage = qpixmap.toImage()
-
-        # Chuyển sang OpenCV
-        cv_img = ImageConverter.qimage_to_opencv(qimage)
-
-        return cv_img
+        # Clear the label and set new pixmap
+        label.clear()
+        label.setPixmap(pixmap)
+        # Adjust geometry to center the image
+        label.setContentsMargins(x, y, x, y)

@@ -7,7 +7,10 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QMessageBox,
     QLabel,
+    QListWidgetItem,
 )
+from PyQt6.QtCore import QStringListModel, QDir, pyqtSignal
+
 import cv2 as cv
 import numpy as np
 import json
@@ -15,11 +18,11 @@ import threading
 import time
 import os
 
-from utils.control_camera import CameraThread
+from configs.settings import Settings
+from utils.camera_thread import CameraThread
 from utils.image_converter import ImageConverter
-
+from processors.image_processor import ImageProcessor
 from gui.MainWindowUI_ui import Ui_MainWindow
-from PyQt6.QtCore import pyqtSignal
 
 
 class MainWindow(QMainWindow):
@@ -27,31 +30,41 @@ class MainWindow(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.showResultSignal.connect(self._update_ui)
+        self.showResultSignal.connect(self.update_ui)
+        self.is_camera_active = False
+        self.processing_lock = threading.Lock()
 
-        """Kết nối các signals với slots"""
+        self.setup_connections()
+        self.initialize_parameters()
+
+        self.b_stop = False
+        self.camera_thread = None
+        self.current_image = None
+        self.file_paths = []
+
+        self.image_processor = ImageProcessor()
+        self.image_converter = ImageConverter()
+        self.settings = Settings()
+
+        self.update_model_list()
+        self.start_loop_process()
+
+    def setup_connections(self):
+        """Set up signal-slot connections"""
         self.ui.Camera.clicked.connect(self.toggle_camera)
-        self.ui.LoadImage.clicked.connect(self.load_image)
         self.ui.Capture.clicked.connect(self.capture_image)
+        self.ui.LoadImage.clicked.connect(self.load_image)
+        self.ui.OpenFolder.clicked.connect(self.open_folder)
         self.ui.AddModel.clicked.connect(self.add_model_config)
         self.ui.SaveModel.clicked.connect(self.save_model_config)
         self.ui.DeleteModel.clicked.connect(self.delete_model_config)
         self.ui.model.currentIndexChanged.connect(self.load_model_config)
-        # Thêm khởi tạo các giá trị mặc định và các loại xử lý
-        self._initialize_parameters()
-        self.b_stop = False
-        self.camera_thread = None
-        self.current_image = None
+        self.ui.listWidgetFile.itemSelectionChanged.connect(self.display_image)
 
-        self._update_model_list()
-
-        self.start_loop_process()
-
-    def _initialize_parameters(self):
+    def initialize_parameters(self):
         """Khởi tạo các tham số mặc định và options"""
         # Blur parameters
         self.blur_types = ["Gaussian Blur", "Median Blur", "Average Blur"]
@@ -95,8 +108,8 @@ class MainWindow(QMainWindow):
         self.ui.contour_approximation_modes.addItems(self.approximation_modes_options)
 
         # Detection parameters
-        self.ui.area_min.setText("4500")
-        self.ui.area_max.setText("9000")
+        self.ui.area_min.setText("100000")
+        self.ui.area_max.setText("150000")
         self.ui.distance.setRange(0, 100)
         self.ui.distance.setValue(15)
 
@@ -217,55 +230,43 @@ class MainWindow(QMainWindow):
                 self, "Add New Model", "Enter model name:", text="new_model"
             )
 
+            if not ok or not model_name:
+                return
+
             model_name = model_name.upper()
 
-            parent_dir = os.path.join("src/models", model_name)
+            # Check if model already exists
+            if model_name in self.settings.get_model_names():
+                QMessageBox.warning(
+                    self,
+                    "Warning",
+                    f"Model '{model_name}' already exists. Please choose a different name.",
+                )
+                return
 
-            if ok and model_name:
-                # Check if file already exists
-                if os.path.exists(parent_dir):
-                    QMessageBox.warning(
-                        self,
-                        "Warning",
-                        f"Model '{model_name}' already exists. Please choose a different name.",
-                    )
-                    return
-
-                # Create models directory if it doesn't exist
-                os.makedirs(parent_dir, exist_ok=True)
-
-                # Create filename with .json extension
-                filename = "config.json"
-                path = os.path.join(parent_dir, filename)
-
-                # Get current configuration
-                config = self.get_config()
-
-                # Save configuration to new file
-                with open(path, "w") as f:
-                    json.dump(config, f, indent=4)
-
-                # Update model combobox
+            # Get current configuration and save
+            config = self.get_config()
+            if self.settings.save_model(model_name, config):
                 self.ui.model.addItem(model_name)
                 self.ui.model.setCurrentText(model_name)
-
                 self.statusBar().showMessage(
                     f"New model '{model_name}' created successfully", 5000
                 )
+            else:
+                QMessageBox.critical(self, "Error", "Failed to create new model")
+
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to create new model: {str(e)}")
 
     def delete_model_config(self):
-        """Delete configuration to current model"""
+        """Delete configuration of current model"""
         try:
             model_name = self.ui.model.currentText()
             if not model_name:
                 QMessageBox.warning(self, "Warning", "Please select a model to delete")
                 return
 
-            dirname = os.path.join("src/models", model_name)
-
-            # Xác nhận xóa file
+            # Confirm deletion
             reply = QMessageBox.question(
                 self,
                 "Confirm Delete",
@@ -276,15 +277,18 @@ class MainWindow(QMainWindow):
             if reply == QMessageBox.StandardButton.No:
                 return
 
-            # Xóa thư mục
-            print(os.path.join("src/models", f"{model_name}"))
-            shutil.rmtree(os.path.join("src/models", model_name))
+            # Delete model
+            if self.settings.delete_model(model_name):
+                self.ui.model.removeItem(self.ui.model.currentIndex())
+                QMessageBox.information(
+                    self, "Success", f"Model '{model_name}' deleted successfully"
+                )
+                self.load_model_config()
+            else:
+                QMessageBox.critical(
+                    self, "Error", f"Failed to delete model '{model_name}'"
+                )
 
-            QMessageBox.information(
-                self, "Success", f"Model '{model_name}' deleted successfully"
-            )
-            self.ui.model.removeItem(self.ui.model.currentIndex())
-            self.load_model_config()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to delete model: {str(e)}")
 
@@ -293,24 +297,21 @@ class MainWindow(QMainWindow):
         try:
             model_name = self.ui.model.currentText()
             if not model_name:
-                QMessageBox.warning(self, "Warning", "Please select a model to load")
                 return
 
-            filename = os.path.join("src/models", f"{model_name}", "config.json")
-
-            if not os.path.exists(filename):
-                QMessageBox.warning(
-                    self, "Warning", f"Model file not found: {filename}"
+            config = self.settings.load_model(model_name)
+            if config and Settings.validate_config(config):
+                self.set_config(config)
+                self.statusBar().showMessage(
+                    f"Model '{model_name}' loaded successfully", 5000
                 )
-                return
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Warning",
+                    f"Invalid or missing configuration for model: {model_name}",
+                )
 
-            with open(filename, "r") as f:
-                config = json.load(f)
-
-            self.set_config(config)
-            self.statusBar().showMessage(
-                f"Model '{model_name}' loaded successfully", 5000
-            )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load model: {str(e)}")
 
@@ -322,47 +323,41 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Warning", "Please select a model to save to")
                 return
 
-            filename = os.path.join("src/models", f"{model_name}", "config.json")
+            # Get current configuration
             config = self.get_config()
 
-            # Confirm overwrite if file exists
-            if os.path.exists(filename):
+            # Confirm overwrite if model exists
+            if model_name in self.settings.get_model_names():
                 reply = QMessageBox.question(
                     self,
                     "Confirm Save",
                     f"Model '{model_name}' already exists. Do you want to overwrite it?",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
-
                 if reply == QMessageBox.StandardButton.No:
                     return
 
-            with open(filename, "w") as f:
-                json.dump(config, f, indent=4)
+            # Save configuration
+            if self.settings.save_model(model_name, config):
+                QMessageBox.information(
+                    self, "Success", f"Model '{model_name}' saved successfully"
+                )
+            else:
+                QMessageBox.critical(
+                    self, "Error", "Failed to save model configuration"
+                )
 
-            QMessageBox.information(
-                self, "Success", f"Model '{model_name}' saved successfully"
-            )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save model: {str(e)}")
 
-    def _update_model_list(self):
+    def update_model_list(self):
         """Update the model combobox with available model configurations"""
         try:
-            # Clear current items
             self.ui.model.clear()
-            # Get list of model files
-            parent_dir = os.path.join("src/models")
-            if os.path.exists(parent_dir):
-                model_names = [
-                    f
-                    for f in os.listdir(parent_dir)
-                    if os.path.isdir(os.path.join(parent_dir, f))
-                ]
-                if model_names:
-                    self.ui.model.addItems(sorted(model_names))
-                    self.load_model_config()
-
+            model_names = self.settings.get_model_names()
+            if model_names:
+                self.ui.model.addItems(sorted(model_names))
+                self.load_model_config()
         except Exception as e:
             print(f"Error updating model list: {str(e)}")
 
@@ -373,7 +368,7 @@ class MainWindow(QMainWindow):
         self.b_stop = True
 
     def thread_loop_process(self):
-        # self.b_stop = False
+        self.b_stop = False
         while True:
             config = self.get_config()
             ret = self.process_image(mat=self.current_image, config=config)
@@ -387,129 +382,35 @@ class MainWindow(QMainWindow):
             time.sleep(0.05)
 
     def process_image(self, mat=None, config: dict = None):
-        start_time = time.time()
-        """Xử lý ảnh dựa trên các tham số hiện tại"""
+        """Process image with thread safety"""
+        time_start = time.time()
         if mat is None or config is None:
             return None
 
-        # Convert to grayscale
-        gray = cv.cvtColor(mat, cv.COLOR_BGR2GRAY)
+        with self.processing_lock:
+            try:
+                # Convert to grayscale
+                gray = cv.cvtColor(mat, cv.COLOR_BGR2GRAY)
 
-        # Apply blur
-        blur = self._apply_blur(gray, config)
+                # Apply blur
+                blur = self.image_processor.apply_blur(gray, config)
 
-        # Apply threshold
-        thresh = self._apply_threshold(blur, config)
+                # Apply threshold
+                thresh = self.image_processor.apply_threshold(blur, config)
 
-        # Apply morphological operations
-        morph = self._apply_morphological(thresh, config)
+                # Apply morphological operations
+                morph = self.image_processor.apply_morphological(thresh, config)
 
-        # Find and draw contours
-        result = self._process_contours(self.current_image, morph, config)
+                # Find and draw contours
+                result = self.image_processor.process_contours(mat, morph, config)
 
-        # Update UI
-        # self._update_ui(result, morph)
-        # print("Techtime Process Image: ", time.time() - start_time)
-        return result, morph
+                print("Time Processing: ", time.time() - time_start)
+                return result, morph
+            except Exception as e:
+                print(f"Error processing image: {str(e)}")
+                return None
 
-    def _apply_blur(self, image, config: dict):
-        """Áp dụng blur dựa trên tham số đã chọn"""
-        ksize = config["blur"]["ksize"]
-        if ksize % 2 == 0:
-            ksize += 1
-
-        blur_type = config["blur"]["type"]
-        if blur_type == "Gaussian Blur":
-            return cv.GaussianBlur(image, (ksize, ksize), 0)
-        elif blur_type == "Median Blur":
-            return cv.medianBlur(image, ksize)
-        else:  # Average Blur
-            return cv.blur(image, (ksize, ksize))
-
-    def _apply_threshold(self, image, config: dict):
-        """Áp dụng threshold dựa trên tham số đã chọn"""
-        block_size = config["threshold"]["block_size"]
-        if block_size % 2 == 0:
-            block_size += 1
-
-        c = config["threshold"]["c_index"]
-
-        adaptive_type = (
-            cv.ADAPTIVE_THRESH_GAUSSIAN_C
-            if config["threshold"]["adaptive_type"] == "Gaussian"
-            else cv.ADAPTIVE_THRESH_MEAN_C
-        )
-
-        thresh_type_map = {
-            "Binary": cv.THRESH_BINARY,
-            "Binary Inverted": cv.THRESH_BINARY_INV,
-            "Truncate": cv.THRESH_TRUNC,
-            "To Zero": cv.THRESH_TOZERO,
-            "To Zero Inverted": cv.THRESH_TOZERO_INV,
-        }
-
-        thresh_type = thresh_type_map[config["threshold"]["thresh_type"]]
-
-        return cv.adaptiveThreshold(
-            image, 255, adaptive_type, thresh_type, block_size, c
-        )
-
-    def _apply_morphological(self, image, config: dict):
-        """Áp dụng phép toán morphological dựa trên tham số đã chọn"""
-        k_size = config["morphological"]["kernel_size"]
-        kernel = cv.getStructuringElement(cv.MORPH_RECT, (k_size, k_size))
-
-        morph_type = config["morphological"]["type"]
-        if morph_type == "Erode":
-            return cv.erode(image, kernel, iterations=5)
-        elif morph_type == "Dilate":
-            return cv.dilate(image, kernel, iterations=5)
-        elif morph_type == "Open":
-            return cv.morphologyEx(image, cv.MORPH_OPEN, kernel)
-        else:  # Close
-            return cv.morphologyEx(image, cv.MORPH_CLOSE, kernel)
-
-    def _process_contours(self, original_img, processed_img, config: dict):
-        """Xử lý và vẽ contours"""
-        # Lấy mode cho findContours
-        retrieval_mode_map = {
-            "EXTERNAL": cv.RETR_EXTERNAL,
-            "LIST": cv.RETR_LIST,
-            "CCOMP": cv.RETR_CCOMP,
-            "TREE": cv.RETR_TREE,
-        }
-        approximation_mode_map = {
-            "NONE": cv.CHAIN_APPROX_NONE,
-            "SIMPLE": cv.CHAIN_APPROX_SIMPLE,
-            "TC89_L1": cv.CHAIN_APPROX_TC89_L1,
-            "TC89_KCOS": cv.CHAIN_APPROX_TC89_KCOS,
-        }
-
-        retrieval_mode = retrieval_mode_map[config["contour"]["retrieval_mode"]]
-        approximation_mode = approximation_mode_map[
-            config["contour"]["approximation_mode"]
-        ]
-
-        # Tìm contours
-        contours, _ = cv.findContours(processed_img, retrieval_mode, approximation_mode)
-
-        # Xử lý contours
-        min_area = float(config["detection"]["area_min"])
-        max_area = float(config["detection"]["area_max"])
-        max_distance = config["detection"]["distance"]
-
-        result_img = original_img.copy()
-
-        for contour in contours:
-            x, y, w, h = cv.boundingRect(contour)
-            area = w * h
-            if min_area <= area <= max_area and abs(w - h) < max_distance:
-                cv.drawContours(result_img, [contour], -1, (0, 0, 255), 2)
-                cv.rectangle(result_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-        return result_img
-
-    def _update_ui(self, original, processed):
+    def update_ui(self, original, processed):
         """
         Updates the UI with original and processed images while maintaining aspect ratio
         and proper scaling.
@@ -521,40 +422,37 @@ class MainWindow(QMainWindow):
         try:
             # Convert and scale the original image
             if original is not None:
-                self.smooth_label(self.ui.OriginalImage, original)
+                self.image_converter.smooth_label(self.ui.OriginalImage, original)
 
             # Convert and scale the processed image
             if processed is not None:
-                self.smooth_label(self.ui.ProcessingImage, processed)
+                self.image_converter.smooth_label(self.ui.ProcessingImage, processed)
 
         except Exception as e:
             print(f"Error updating UI: {str(e)}")
-
-    def smooth_label(self, label: QLabel, image: np.ndarray):
-        pixmap = ImageConverter.opencv_to_qpixmap(image, label.size())
-
-        # Calculate position to center the image
-        x = (label.size().width() - pixmap.width()) // 2
-        y = (label.size().height() - pixmap.height()) // 2
-
-        # Clear the label and set new pixmap
-        label.clear()
-        label.setPixmap(pixmap)
-        # Adjust geometry to center the image
-        label.setContentsMargins(x, y, x, y)
 
     def toggle_camera(self):
         """Toggle camera state between running and stopped"""
         if not self.camera_thread or not self.camera_thread.isRunning():
             self.start_camera()
             self.ui.Camera.setText("Stop Camera")
-            # Disable Load Image when camera is running
             self.ui.LoadImage.setEnabled(False)
+            self.ui.OpenFolder.setEnabled(False)
+            self.ui.Capture.setEnabled(True)
+            self.is_camera_active = True
         else:
             self.stop_camera()
             self.ui.Camera.setText("Start Camera")
-            # Re-enable Load Image when camera is stopped
             self.ui.LoadImage.setEnabled(True)
+            self.ui.OpenFolder.setEnabled(True)
+            self.ui.Capture.setEnabled(False)
+            self.is_camera_active = False
+            # Clear the current image when stopping camera
+            with self.processing_lock:
+                self.current_image = None
+                # Clear the labels
+                self.ui.OriginalImage.clear()
+                self.ui.ProcessingImage.clear()
 
     def start_camera(self):
         """Start the camera and return success status"""
@@ -581,8 +479,10 @@ class MainWindow(QMainWindow):
 
     def update_frame(self, frame):
         """Update the frame display and store current frame"""
-        # self.cap_image = frame.copy()
-        self.smooth_label(self.ui.OriginalImage, frame)
+        with self.processing_lock:
+            if self.is_camera_active:
+                self.current_image = frame.copy()
+                self.image_converter.smooth_label(self.ui.OriginalImage, frame)
 
     def capture_image(self):
         """Capture current frame or loaded image"""
@@ -616,13 +516,12 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to capture image: {str(e)}")
 
-    def load_image(self, image=None):
+    def load_image(self):
         """Load and process an image from file"""
         try:
-            # Stop camera if running
-            if self.camera_thread and self.camera_thread.isRunning():
-                self.ui.Camera.setText("Open Camera")
-                self.stop_camera()
+            # Ensure camera is stopped
+            if self.is_camera_active:
+                self.toggle_camera()
 
             file_dialog = QFileDialog()
             file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
@@ -630,19 +529,67 @@ class MainWindow(QMainWindow):
 
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 file_path = file_dialog.selectedFiles()[0]
-                self.current_image = cv.imread(file_path)
 
-                if self.current_image is None:
-                    QMessageBox.critical(
-                        self, "Error", "Failed to load image. Please try another file."
+                with self.processing_lock:
+                    self.current_image = cv.imread(file_path)
+                    if self.current_image is None:
+                        QMessageBox.critical(
+                            self,
+                            "Error",
+                            "Failed to load image. Please try another file.",
+                        )
+                        return
+                    # Update the original image display
+                    self.image_converter.smooth_label(
+                        self.ui.OriginalImage, self.current_image
                     )
-                    return
 
         except Exception as e:
             QMessageBox.critical(
                 self, "Error", f"An error occurred while loading the image: {str(e)}"
             )
 
-    def closeEvent(self, a0):
+    def open_folder(self):
+        # Hộp thoại chọn thư mục
+        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
+        if folder_path:
+            # Lấy danh sách file ảnh từ thư mục
+            self.file_paths.clear()  # Xóa dữ liệu cũ
+            self.ui.listWidgetFile.clear()  # Xóa mục cũ trong QListWidget
+            image_extensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif"]
+            for file_name in os.listdir(folder_path):
+                if any(file_name.lower().endswith(ext) for ext in image_extensions):
+                    file_path = os.path.join(folder_path, file_name)
+                    self.file_paths.append(file_path)
+
+                    # Thêm mục mới vào QListWidget
+                    list_item = QListWidgetItem(file_name)
+                    self.ui.listWidgetFile.addItem(list_item)
+
+    def display_image(self):
+        # Display the current image in the viewer
+        selected_items = self.ui.listWidgetFile.selectedItems()
+        if selected_items:
+            item = selected_items[0]
+            index = self.ui.listWidgetFile.row(item)
+            file_path = self.file_paths[index]
+            with self.processing_lock:
+                self.current_image = cv.imread(file_path)
+                if self.current_image is None:
+                    QMessageBox.critical(
+                        self,
+                        "Error",
+                        "Failed to load image. Please try another file.",
+                    )
+                    return
+                # Update the original image display
+                self.image_converter.smooth_label(
+                    self.ui.OriginalImage, self.current_image
+                )
+
+    def closeEvent(self, event):
+        """Clean up threads before closing"""
         self.stop_loop_process()
-        return super().closeEvent(a0)
+        if self.camera_thread and self.camera_thread.isRunning():
+            self.stop_camera()
+        return super().closeEvent(event)
