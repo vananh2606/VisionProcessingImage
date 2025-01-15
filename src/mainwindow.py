@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QListWidgetItem,
 )
-from PyQt6.QtCore import QStringListModel, QDir, pyqtSignal
+from PyQt6.QtCore import QStringListModel, QPointF, QDir, pyqtSignal
 
 import cv2 as cv
 import numpy as np
@@ -18,11 +18,14 @@ import threading
 import time
 import os
 
-from configs.settings import Settings
-from utils.camera_thread import CameraThread
-from utils.image_converter import ImageConverter
-from processors.image_processor import ImageProcessor
+from libs.settings import Settings
+from libs.camera_thread import CameraThread
+from libs.image_converter import ImageConverter
+from libs.image_processor import ImageProcessor
 from gui.MainWindowUI_ui import Ui_MainWindow
+from libs.canvas import Canvas, WindowCanvas
+from libs.shape import Shape
+from libs.utils import ndarray2pixmap
 
 
 class MainWindow(QMainWindow):
@@ -39,6 +42,14 @@ class MainWindow(QMainWindow):
 
         self.setup_connections()
         self.initialize_parameters()
+
+        self.canvasOriginalImage = Canvas()
+        self.canvasProcessingImage = Canvas()
+        self.canvasOutputImage = Canvas()
+
+        self.ui.Screen.addWidget(WindowCanvas(self.canvasOriginalImage))
+        self.ui.Screen.addWidget(WindowCanvas(self.canvasProcessingImage))
+        self.ui.Screen.addWidget(WindowCanvas(self.canvasOutputImage))
 
         self.b_stop = False
         self.camera_thread = None
@@ -115,6 +126,7 @@ class MainWindow(QMainWindow):
 
     def get_config(self) -> dict:
         """Get current configuration from UI parameters"""
+        shapes: list[Shape] = self.canvasOriginalImage.shapes
         try:
             config = {
                 # Blur parameters
@@ -144,6 +156,10 @@ class MainWindow(QMainWindow):
                     "area_min": self.ui.area_min.text(),
                     "area_max": self.ui.area_max.text(),
                     "distance": self.ui.distance.value(),
+                },
+                "shapes": {
+                    i: {"label": shapes[i].label, "box": shapes[i].cvBox}
+                    for i in range(len(shapes))
                 },
             }
             return config
@@ -208,6 +224,22 @@ class MainWindow(QMainWindow):
                 self.ui.area_min.setText(str(config["detection"]["area_min"]))
                 self.ui.area_max.setText(str(config["detection"]["area_max"]))
                 self.ui.distance.setValue(config["detection"]["distance"])
+
+            self.canvasOriginalImage.shapes.clear()
+            if "shapes" in config:
+                shapes: dict = config["shapes"]
+                for i in shapes:
+                    label = shapes[i]["label"]
+                    x, y, w, h = shapes[i]["box"]
+                    s = Shape(label)
+                    s.points = [
+                        QPointF(x, y),
+                        QPointF(x + w, y),
+                        QPointF(x + w, y + h),
+                        QPointF(x, y + h),
+                    ]
+                    self.canvasOriginalImage.shapes.append(s)
+
             # Process image with new configuration
         except Exception as e:
             QMessageBox.critical(
@@ -410,7 +442,7 @@ class MainWindow(QMainWindow):
                 print(f"Error processing image: {str(e)}")
                 return None
 
-    def update_ui(self, original, processed):
+    def update_ui(self, output, processed):
         """
         Updates the UI with original and processed images while maintaining aspect ratio
         and proper scaling.
@@ -421,12 +453,12 @@ class MainWindow(QMainWindow):
         """
         try:
             # Convert and scale the original image
-            if original is not None:
-                self.image_converter.smooth_label(self.ui.OriginalImage, original)
+            if output is not None:
+                self.canvasOutputImage.load_pixmap(ndarray2pixmap(output))
 
             # Convert and scale the processed image
             if processed is not None:
-                self.image_converter.smooth_label(self.ui.ProcessingImage, processed)
+                self.canvasProcessingImage.load_pixmap(ndarray2pixmap(processed))
 
         except Exception as e:
             print(f"Error updating UI: {str(e)}")
@@ -451,8 +483,8 @@ class MainWindow(QMainWindow):
             with self.processing_lock:
                 self.current_image = None
                 # Clear the labels
-                self.ui.OriginalImage.clear()
-                self.ui.ProcessingImage.clear()
+                self.canvasOutputImage.clear_pixmap()
+                self.canvasProcessingImage.clear_pixmap()
 
     def start_camera(self):
         """Start the camera and return success status"""
@@ -482,7 +514,7 @@ class MainWindow(QMainWindow):
         with self.processing_lock:
             if self.is_camera_active:
                 self.current_image = frame.copy()
-                self.image_converter.smooth_label(self.ui.OriginalImage, frame)
+                self.canvasOriginalImage.load_pixmap(ndarray2pixmap(frame))
 
     def capture_image(self):
         """Capture current frame or loaded image"""
@@ -540,8 +572,8 @@ class MainWindow(QMainWindow):
                         )
                         return
                     # Update the original image display
-                    self.image_converter.smooth_label(
-                        self.ui.OriginalImage, self.current_image
+                    self.canvasOriginalImage.load_pixmap(
+                        ndarray2pixmap(self.current_image), True
                     )
 
         except Exception as e:
@@ -583,8 +615,8 @@ class MainWindow(QMainWindow):
                     )
                     return
                 # Update the original image display
-                self.image_converter.smooth_label(
-                    self.ui.OriginalImage, self.current_image
+                self.canvasOriginalImage.load_pixmap(
+                    ndarray2pixmap(self.current_image), True
                 )
 
     def closeEvent(self, event):

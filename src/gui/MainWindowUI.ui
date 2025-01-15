@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <layout class="QHBoxLayout" name="TeachingLayout" stretch="1,2,1">
+     <layout class="QHBoxLayout" name="TeachingLayout" stretch="1,1,1">
       <property name="spacing">
        <number>20</number>
       </property>
@@ -267,40 +267,7 @@
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="Screen">
-        <item>
-         <widget class="QLabel" name="OriginalImage">
-          <property name="frameShape">
-           <enum>QFrame::Box</enum>
-          </property>
-          <property name="text">
-           <string>Original Image</string>
-          </property>
-          <property name="scaledContents">
-           <bool>true</bool>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="ProcessingImage">
-          <property name="frameShape">
-           <enum>QFrame::Box</enum>
-          </property>
-          <property name="text">
-           <string>Processing Image</string>
-          </property>
-          <property name="scaledContents">
-           <bool>true</bool>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <layout class="QVBoxLayout" name="Screen"/>
       </item>
       <item>
        <layout class="QVBoxLayout" name="ListFile">

@@ -1,11 +1,9 @@
 from PyQt6.QtCore import QThread, pyqtSignal
-import sys
 import cv2 as cv
 import time
 
-sys.path.append("control_camera/")
-from control_camera.cameras.hik import HIK
-from control_camera.cameras.base_camera import NO_ERROR
+from cameras.hik import HIK
+from cameras.base_camera import NO_ERROR
 
 
 class CameraThread(QThread):

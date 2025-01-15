@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file 'MainWindowUI.ui'
+# Form implementation generated from reading ui file 'gui\MainWindowUI.ui'
 #
 # Created by: PyQt6 UI code generator 6.8.0
 #
@@ -198,18 +198,6 @@ class Ui_MainWindow(object):
         self.TeachingLayout.addLayout(self.ConfigLayout)
         self.Screen = QtWidgets.QVBoxLayout()
         self.Screen.setObjectName("Screen")
-        self.OriginalImage = QtWidgets.QLabel(parent=self.centralwidget)
-        self.OriginalImage.setFrameShape(QtWidgets.QFrame.Shape.Box)
-        self.OriginalImage.setScaledContents(True)
-        self.OriginalImage.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.OriginalImage.setObjectName("OriginalImage")
-        self.Screen.addWidget(self.OriginalImage)
-        self.ProcessingImage = QtWidgets.QLabel(parent=self.centralwidget)
-        self.ProcessingImage.setFrameShape(QtWidgets.QFrame.Shape.Box)
-        self.ProcessingImage.setScaledContents(True)
-        self.ProcessingImage.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.ProcessingImage.setObjectName("ProcessingImage")
-        self.Screen.addWidget(self.ProcessingImage)
         self.TeachingLayout.addLayout(self.Screen)
         self.ListFile = QtWidgets.QVBoxLayout()
         self.ListFile.setObjectName("ListFile")
@@ -218,7 +206,7 @@ class Ui_MainWindow(object):
         self.ListFile.addWidget(self.listWidgetFile)
         self.TeachingLayout.addLayout(self.ListFile)
         self.TeachingLayout.setStretch(0, 1)
-        self.TeachingLayout.setStretch(1, 2)
+        self.TeachingLayout.setStretch(1, 1)
         self.TeachingLayout.setStretch(2, 1)
         self.horizontalLayout.addLayout(self.TeachingLayout)
         MainWindow.setCentralWidget(self.centralwidget)
@@ -261,8 +249,6 @@ class Ui_MainWindow(object):
         self.Capture.setText(_translate("MainWindow", "Capture"))
         self.LoadImage.setText(_translate("MainWindow", "Load Image"))
         self.OpenFolder.setText(_translate("MainWindow", "Open Folder"))
-        self.OriginalImage.setText(_translate("MainWindow", "Original Image"))
-        self.ProcessingImage.setText(_translate("MainWindow", "Processing Image"))
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.menuAbout.setTitle(_translate("MainWindow", "About"))
 

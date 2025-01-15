@@ -1,9 +1,10 @@
 import sys
 
+sys.path.append("libs/")
 sys.path.append("gui/")
 
 from PyQt6.QtWidgets import QApplication
-from gui.mainwindow import MainWindow
+from mainwindow import MainWindow
 
 
 def main():

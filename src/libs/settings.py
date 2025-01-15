@@ -51,7 +51,7 @@ class Settings:
     }
 
     def __init__(self):
-        self.models_dir = os.path.join("src", "models")
+        self.models_dir = os.path.join("models")
         os.makedirs(self.models_dir, exist_ok=True)
 
     def get_ui_parameter(self):
