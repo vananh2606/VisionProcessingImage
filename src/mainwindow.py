@@ -15,8 +15,10 @@ import cv2 as cv
 import numpy as np
 import json
 import threading
+import socket
 import time
 import os
+from collections import namedtuple
 
 from libs.settings import Settings
 from libs.camera_thread import CameraThread
@@ -27,18 +29,38 @@ from libs.canvas import Canvas, WindowCanvas
 from libs.shape import Shape
 from libs.utils import ndarray2pixmap
 
+from libs.tcp_server import Server
+
+
+STEP_WAIT_TRIGGER = "STEP_WAIT_TRIGGER"
+STEP_PREPROCESS = "STEP_PREPROCESS"
+STEP_PROCESS = "STEP_PROCESS"
+STEP_OUTPUT = "STEP_OUTPUT"
+STEP_RELEASE = "STEP_RELEASE"
+
+RESULT = namedtuple(
+    "result",
+    ["src", "dst", "mbin", "ret", "msg"],
+    defaults=[None, None, None, True, ""],
+)
+
 
 class MainWindow(QMainWindow):
-    showResultSignal = pyqtSignal(np.ndarray, np.ndarray)
+    showResultSignal = pyqtSignal(RESULT)
+    showResultAutoSignal = pyqtSignal(RESULT)
+    logInfoSignal = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.showResultSignal.connect(self.update_ui)
         self.is_camera_active = False
         self.processing_lock = threading.Lock()
+
+        self.server = Server()
+        self.server_thread = None
+        self.server_running = False
 
         self.setup_connections()
         self.initialize_parameters()
@@ -47,14 +69,20 @@ class MainWindow(QMainWindow):
         self.canvasProcessingImage = Canvas()
         self.canvasOutputImage = Canvas()
 
-        self.ui.Screen.addWidget(WindowCanvas(self.canvasOriginalImage))
-        self.ui.Screen.addWidget(WindowCanvas(self.canvasProcessingImage))
-        self.ui.Screen.addWidget(WindowCanvas(self.canvasOutputImage))
+        self.ui.ScreenTeaching.addWidget(WindowCanvas(self.canvasOriginalImage))
+        self.ui.ScreenTeaching.addWidget(WindowCanvas(self.canvasProcessingImage))
+        self.ui.ScreenTeaching.addWidget(WindowCanvas(self.canvasOutputImage))
+
+        self.canvasOutputImageAuto = Canvas()
+        self.ui.ScreenAuto.addWidget(WindowCanvas(self.canvasOutputImageAuto))
 
         self.b_stop = False
         self.camera_thread = None
         self.current_image = None
         self.file_paths = []
+        self.current_socket = None
+        self.b_trigger = False
+        self.b_stop_auto = False
 
         self.image_processor = ImageProcessor()
         self.image_converter = ImageConverter()
@@ -65,6 +93,9 @@ class MainWindow(QMainWindow):
 
     def setup_connections(self):
         """Set up signal-slot connections"""
+        self.showResultSignal.connect(self.show_result)
+        self.showResultAutoSignal.connect(self.show_result_auto)
+
         self.ui.Camera.clicked.connect(self.toggle_camera)
         self.ui.Capture.clicked.connect(self.capture_image)
         self.ui.LoadImage.clicked.connect(self.load_image)
@@ -74,6 +105,136 @@ class MainWindow(QMainWindow):
         self.ui.DeleteModel.clicked.connect(self.delete_model_config)
         self.ui.model.currentIndexChanged.connect(self.load_model_config)
         self.ui.listWidgetFile.itemSelectionChanged.connect(self.display_image)
+
+        self.logInfoSignal.connect(self.view_log_info)
+        self.server.logInfoSignal.connect(self.view_log_info)
+        self.server.onTriggerSignal.connect(self.on_trigger)
+        self.ui.button_start.clicked.connect(self.on_start_auto)
+        self.ui.button_stop.clicked.connect(self.on_stop_auto)
+
+    """
+    Logic Layout Auto
+    """
+
+    def on_trigger(self, s: socket.socket):
+        if self.b_trigger:
+            return
+        self.b_trigger = True
+        self.current_socket = s
+
+    def off_trigger(self):
+        self.b_trigger = False
+        self.current_socket = None
+
+    def start_loop_auto(self):
+        try:
+            self.ui.button_start.setEnabled(False)
+            # Log thông báo
+            # Khởi động server nếu chưa chạy
+            self.start_server()
+
+            # Khởi động camera thread mới
+            self.camera_thread = CameraThread()
+            self.camera_thread.open_camera()
+
+            threading.Thread(target=self.loop_auto, daemon=True).start()
+
+        except Exception as e:
+            self.logInfoSignal.emit(f"Error starting auto mode: {str(e)}")
+
+    def stop_loop_auto(self):
+        """Dừng vòng lặp xử lý và camera"""
+        try:
+            # Log thông báo
+            # Đặt cờ dừng vòng lặp
+            self.b_stop_auto = True
+
+            # Dừng camera
+            if self.camera_thread:
+                self.camera_thread.stop_camera()
+
+            self.stop_server()
+        except Exception as e:
+            self.logInfoSignal.emit(f"Error stopping auto mode: {str(e)}")
+
+        self.ui.button_start.setEnabled(True)
+
+    def loop_auto(self):
+        self.b_stop_auto = False
+        step = STEP_WAIT_TRIGGER
+        before_step = ""
+        config: dict = None
+        mat: np.ndarray = None
+        result: RESULT = None
+
+        self.logInfoSignal.emit("Auto processing started")
+
+        while True:
+            if before_step != step:
+                self.logInfoSignal.emit(step)
+                before_step = step
+
+            if step == STEP_WAIT_TRIGGER:
+                if self.b_trigger:
+                    step = STEP_PREPROCESS
+
+            elif step == STEP_PREPROCESS:
+                config = self.get_config()
+                _, mat = self.camera_thread.camera.grab()
+
+                step = STEP_PROCESS
+
+            elif step == STEP_PROCESS:
+                if mat is None:
+                    result = RESULT()
+                else:
+                    result = self.process_image(mat=mat, config=config)
+
+                step = STEP_OUTPUT
+                pass
+
+            elif step == STEP_OUTPUT:
+                self.server.send_message(self.current_socket, result.msg)
+                self.showResultAutoSignal.emit(result)
+                step = STEP_RELEASE
+
+            elif step == STEP_RELEASE:
+                self.off_trigger()
+                config = None
+                mat = None
+                result = None
+                step = STEP_WAIT_TRIGGER
+
+            time.sleep(0.005)
+
+            if self.b_stop_auto:
+                break
+
+        self.logInfoSignal.emit("Auto processing stopped")
+
+    def on_start_auto(self):
+        """Khởi động camera và bắt đầu vòng lặp xử lý"""
+        self.start_loop_auto()
+
+    def on_stop_auto(self):
+        self.stop_loop_auto()
+
+    def start_server(self):
+        threading.Thread(target=self.server.run_server, daemon=True).start()
+        self.logInfoSignal.emit("Started server")
+
+    def stop_server(self):
+        self.server_running = False
+        self.server.stop_server()
+        self.logInfoSignal.emit("Stopped server")
+        # self.ui.button_start.setEnabled(True)
+
+    def view_log_info(self, mess):
+        self.ui.list_view_log.addItem(mess)
+
+    """
+    Logic Layout Teaching
+    """
 
     def initialize_parameters(self):
         """Khởi tạo các tham số mặc định và options"""
@@ -403,15 +564,14 @@ class MainWindow(QMainWindow):
         self.b_stop = False
         while True:
             config = self.get_config()
-            ret = self.process_image(mat=self.current_image, config=config)
+            ret: RESULT = self.process_image(mat=self.current_image, config=config)
             if ret is not None:
-                result, morph = ret
-                self.showResultSignal.emit(result, morph)
+                self.showResultSignal.emit(ret)
 
             if self.b_stop:
                 break
 
-            time.sleep(0.05)
+            time.sleep(0.005)
 
     def process_image(self, mat=None, config: dict = None):
         """Process image with thread safety"""
@@ -436,13 +596,26 @@ class MainWindow(QMainWindow):
                 # Find and draw contours
                 result = self.image_processor.process_contours(mat, morph, config)
 
-                print("Time Processing: ", time.time() - time_start)
-                return result, morph
+                #
+                msg = "OK"
+
+                # print("Time Processing: ", time.time() - time_start)
+                # return result, morph
+                return RESULT(src=mat, dst=result, mbin=morph, ret=True, msg=msg)
             except Exception as e:
                 print(f"Error processing image: {str(e)}")
                 return None
 
-    def update_ui(self, output, processed):
+    def show_result_auto(self, result: RESULT):
+        try:
+            # Convert and scale the original image
+            if result.dst is not None:
+                self.canvasOutputImageAuto.load_pixmap(ndarray2pixmap(result.dst))
+
+        except Exception as e:
+            print(f"Error updating UI: {str(e)}")
+
+    def show_result(self, result: RESULT):
         """
         Updates the UI with original and processed images while maintaining aspect ratio
         and proper scaling.
@@ -453,12 +626,12 @@ class MainWindow(QMainWindow):
         """
         try:
             # Convert and scale the original image
-            if output is not None:
-                self.canvasOutputImage.load_pixmap(ndarray2pixmap(output))
+            if result.dst is not None:
+                self.canvasOutputImage.load_pixmap(ndarray2pixmap(result.dst))
 
             # Convert and scale the processed image
-            if processed is not None:
-                self.canvasProcessingImage.load_pixmap(ndarray2pixmap(processed))
+            if result.mbin is not None:
+                self.canvasProcessingImage.load_pixmap(ndarray2pixmap(result.mbin))
 
         except Exception as e:
             print(f"Error updating UI: {str(e)}")
@@ -489,8 +662,10 @@ class MainWindow(QMainWindow):
     def start_camera(self):
         """Start the camera and return success status"""
         try:
+            self.ui.listWidgetFile.clear()
             self.camera_thread = CameraThread()
             self.camera_thread.frameCaptured.connect(self.update_frame)
+            self.camera_thread.open_camera()
             self.camera_thread.start()
 
         except Exception as e:
@@ -502,7 +677,7 @@ class MainWindow(QMainWindow):
         """Stop the camera and cleanup"""
         try:
             if self.camera_thread and self.camera_thread.isRunning():
-                self.camera_thread.stop()
+                self.camera_thread.stop_camera()
                 self.camera_thread.frameCaptured.disconnect()
         except Exception as e:
             QMessageBox.critical(
@@ -554,6 +729,8 @@ class MainWindow(QMainWindow):
             # Ensure camera is stopped
             if self.is_camera_active:
                 self.toggle_camera()
+
+            self.ui.listWidgetFile.clear()
 
             file_dialog = QFileDialog()
             file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)

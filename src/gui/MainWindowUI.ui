@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>789</width>
-    <height>592</height>
+    <width>787</width>
+    <height>586</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,267 +16,438 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <layout class="QHBoxLayout" name="TeachingLayout" stretch="1,1,1">
-      <property name="spacing">
-       <number>20</number>
+     <widget class="QTabWidget" name="TabMachine">
+      <property name="currentIndex">
+       <number>0</number>
       </property>
-      <property name="leftMargin">
-       <number>20</number>
-      </property>
-      <property name="topMargin">
-       <number>20</number>
-      </property>
-      <property name="rightMargin">
-       <number>20</number>
-      </property>
-      <property name="bottomMargin">
-       <number>20</number>
-      </property>
-      <item>
-       <layout class="QVBoxLayout" name="ConfigLayout" stretch="8,1,2">
+      <widget class="QWidget" name="TabAuto">
+       <attribute name="title">
+        <string>Auto</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
-         <layout class="QVBoxLayout" name="Parameter" stretch="2,1,2,4,1,2,1,2,1,2">
+         <layout class="QVBoxLayout" name="AutoLayout" stretch="1,12,4">
           <property name="spacing">
-           <number>5</number>
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <property name="rightMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>10</number>
           </property>
           <item>
-           <layout class="QHBoxLayout" name="Model" stretch="1,2">
+           <layout class="QHBoxLayout" name="Information" stretch="1,3,1">
             <item>
-             <widget class="QLabel" name="text_model">
+             <widget class="QLabel" name="label_version">
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
+              </property>
               <property name="text">
-               <string>Model:</string>
+               <string>Version</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="model"/>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="TextBlurImage" stretch="3,1">
-            <item>
-             <widget class="QLabel" name="text_type_blur">
+             <widget class="QLabel" name="label_project">
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
+              </property>
               <property name="text">
-               <string>Type Blur</string>
+               <string>Name Project</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="text_ksize">
-              <property name="text">
-               <string>K-size</string>
+             <widget class="QLabel" name="label_time">
+              <property name="frameShape">
+               <enum>QFrame::NoFrame</enum>
               </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="BlurImage" stretch="3,1">
-            <item>
-             <widget class="QComboBox" name="type_blur"/>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="ksize"/>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QGridLayout" name="Thresh">
-            <item row="0" column="3">
-             <widget class="QLabel" name="tex_block_size">
               <property name="text">
-               <string>Block Size:</string>
+               <string>Time</string>
               </property>
-             </widget>
-            </item>
-            <item row="0" column="4">
-             <widget class="QSpinBox" name="block_size"/>
-            </item>
-            <item row="1" column="4">
-             <widget class="QSpinBox" name="c_index"/>
-            </item>
-            <item row="1" column="0" colspan="3">
-             <widget class="QComboBox" name="type_thresh"/>
-            </item>
-            <item row="1" column="3">
-             <widget class="QLabel" name="text_c_index">
-              <property name="text">
-               <string>C Index: </string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0" colspan="3">
-             <widget class="QComboBox" name="type_adaptive_thresh"/>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="TextMorph" stretch="3,1">
-            <item>
-             <widget class="QLabel" name="text_type_morph">
-              <property name="text">
-               <string>Type Morph</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="text_kernel">
-              <property name="text">
-               <string>Kernel</string>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
               </property>
              </widget>
             </item>
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="Morph" stretch="3,1">
+           <layout class="QHBoxLayout" name="ScreenAuto"/>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="ControlAuto" stretch="2,1,2,1">
             <item>
-             <widget class="QComboBox" name="morph"/>
+             <layout class="QVBoxLayout" name="ListDetail" stretch="0,0,0,0">
+              <item>
+               <widget class="QLabel" name="label_ok">
+                <property name="text">
+                 <string>N-OK: </string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_ng">
+                <property name="text">
+                 <string>N-NG:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_total">
+                <property name="text">
+                 <string>N-Total:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_rate">
+                <property name="text">
+                 <string>Rate:</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item>
-             <widget class="QSpinBox" name="kernel"/>
+             <layout class="QVBoxLayout" name="Checked">
+              <item>
+               <widget class="QLabel" name="label_checked">
+                <property name="frameShape">
+                 <enum>QFrame::Box</enum>
+                </property>
+                <property name="text">
+                 <string>Pass and Fail</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="ViewLog">
+              <item>
+               <widget class="QListWidget" name="list_view_log"/>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="ButtonControl">
+              <item>
+               <widget class="QPushButton" name="button_start">
+                <property name="text">
+                 <string>Start</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_stop">
+                <property name="text">
+                 <string>Stop</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_reset">
+                <property name="text">
+                 <string>Reset</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="TextContour" stretch="1,2">
-            <item>
-             <widget class="QLabel" name="text_type_retriecal">
-              <property name="text">
-               <string>Retrieval </string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="text_contour_approximation">
-              <property name="text">
-               <string>Contour Approximation</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="Contour" stretch="1,2">
-            <item>
-             <widget class="QComboBox" name="retrieval_modes"/>
-            </item>
-            <item>
-             <widget class="QComboBox" name="contour_approximation_modes"/>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="Text_Detection" stretch="2,2,1">
-            <item>
-             <widget class="QLabel" name="text_area_min">
-              <property name="text">
-               <string>Area Min</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="text_area_max">
-              <property name="text">
-               <string>Area Max</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="text_distance">
-              <property name="text">
-               <string>Distance</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="Rectangle" stretch="2,2,1">
-            <item>
-             <widget class="QLineEdit" name="area_min"/>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="area_max"/>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="distance"/>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="ButtonModel">
-          <item>
-           <widget class="QPushButton" name="AddModel">
-            <property name="text">
-             <string>Add Model</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="DeleteModel">
-            <property name="text">
-             <string>Delete Model</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="SaveModel">
-            <property name="text">
-             <string>Save Model</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="Button">
-          <item>
-           <widget class="QPushButton" name="Camera">
-            <property name="text">
-             <string>Open Camera</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="Capture">
-            <property name="text">
-             <string>Capture</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="LoadImage">
-            <property name="text">
-             <string>Load Image</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="OpenFolder">
-            <property name="text">
-             <string>Open Folder</string>
-            </property>
-           </widget>
           </item>
          </layout>
         </item>
        </layout>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="Screen"/>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="ListFile">
+      </widget>
+      <widget class="QWidget" name="TabTeaching">
+       <attribute name="title">
+        <string>Teaching</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QListWidget" name="listWidgetFile"/>
+         <layout class="QHBoxLayout" name="TeachingLayout" stretch="1,2,1">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <property name="rightMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <layout class="QVBoxLayout" name="ConfigLayout" stretch="8,1,2">
+            <item>
+             <layout class="QVBoxLayout" name="Parameter" stretch="2,1,2,4,1,2,1,2,1,2">
+              <property name="spacing">
+               <number>5</number>
+              </property>
+              <item>
+               <layout class="QHBoxLayout" name="Model" stretch="1,2">
+                <item>
+                 <widget class="QLabel" name="text_model">
+                  <property name="text">
+                   <string>Model:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="model"/>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="TextBlurImage" stretch="3,1">
+                <item>
+                 <widget class="QLabel" name="text_type_blur">
+                  <property name="text">
+                   <string>Type Blur</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="text_ksize">
+                  <property name="text">
+                   <string>K-size</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="BlurImage" stretch="3,1">
+                <item>
+                 <widget class="QComboBox" name="type_blur"/>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="ksize"/>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QGridLayout" name="Thresh">
+                <item row="0" column="3">
+                 <widget class="QLabel" name="tex_block_size">
+                  <property name="text">
+                   <string>Block Size:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="4">
+                 <widget class="QSpinBox" name="block_size"/>
+                </item>
+                <item row="1" column="4">
+                 <widget class="QSpinBox" name="c_index"/>
+                </item>
+                <item row="1" column="0" colspan="3">
+                 <widget class="QComboBox" name="type_thresh"/>
+                </item>
+                <item row="1" column="3">
+                 <widget class="QLabel" name="text_c_index">
+                  <property name="text">
+                   <string>C Index: </string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0" colspan="3">
+                 <widget class="QComboBox" name="type_adaptive_thresh"/>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="TextMorph" stretch="3,1">
+                <item>
+                 <widget class="QLabel" name="text_type_morph">
+                  <property name="text">
+                   <string>Type Morph</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="text_kernel">
+                  <property name="text">
+                   <string>Kernel</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="Morph" stretch="3,1">
+                <item>
+                 <widget class="QComboBox" name="morph"/>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="kernel"/>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="TextContour" stretch="1,2">
+                <item>
+                 <widget class="QLabel" name="text_type_retriecal">
+                  <property name="text">
+                   <string>Retrieval </string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="text_contour_approximation">
+                  <property name="text">
+                   <string>Contour Approximation</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="Contour" stretch="1,2">
+                <item>
+                 <widget class="QComboBox" name="retrieval_modes"/>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="contour_approximation_modes"/>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="Text_Detection" stretch="2,2,1">
+                <item>
+                 <widget class="QLabel" name="text_area_min">
+                  <property name="text">
+                   <string>Area Min</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="text_area_max">
+                  <property name="text">
+                   <string>Area Max</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="text_distance">
+                  <property name="text">
+                   <string>Distance</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="Rectangle" stretch="2,2,1">
+                <item>
+                 <widget class="QLineEdit" name="area_min"/>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="area_max"/>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="distance"/>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="ButtonModel">
+              <item>
+               <widget class="QPushButton" name="AddModel">
+                <property name="text">
+                 <string>Add Model</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="DeleteModel">
+                <property name="text">
+                 <string>Delete Model</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="SaveModel">
+                <property name="text">
+                 <string>Save Model</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="Button">
+              <item>
+               <widget class="QPushButton" name="Camera">
+                <property name="text">
+                 <string>Open Camera</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="Capture">
+                <property name="text">
+                 <string>Capture</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="LoadImage">
+                <property name="text">
+                 <string>Load Image</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="OpenFolder">
+                <property name="text">
+                 <string>Open Folder</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="ScreenTeaching"/>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="ListFile">
+            <item>
+             <widget class="QListWidget" name="listWidgetFile"/>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </item>
        </layout>
-      </item>
-     </layout>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -285,7 +456,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>789</width>
+     <width>787</width>
      <height>21</height>
     </rect>
    </property>

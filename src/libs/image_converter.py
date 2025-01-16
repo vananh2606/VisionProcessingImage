@@ -74,3 +74,16 @@ class ImageConverter:
             )
 
         return pixmap
+
+    def smooth_label(self, label: Canvas, image: np.ndarray):
+        pixmap = ImageConverter.opencv_to_qpixmap(image, label.size())
+
+        # Calculate position to center the image
+        x = (label.size().width() - pixmap.width()) // 2
+        y = (label.size().height() - pixmap.height()) // 2
+
+        # Clear the label and set new pixmap
+        label.clear()
+        label.setPixmap(pixmap)
+        # Adjust geometry to center the image
+        label.setContentsMargins(x, y, x, y)
