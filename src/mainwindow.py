@@ -46,7 +46,7 @@ RESULT = namedtuple(
 
 
 class MainWindow(QMainWindow):
-    showResultSignal = pyqtSignal(RESULT)
+    showResultTechingSignal = pyqtSignal(RESULT)
     showResultAutoSignal = pyqtSignal(RESULT)
     logInfoSignal = pyqtSignal(str)
 
@@ -93,18 +93,18 @@ class MainWindow(QMainWindow):
 
     def setup_connections(self):
         """Set up signal-slot connections"""
-        self.showResultSignal.connect(self.show_result)
+        self.showResultTechingSignal.connect(self.show_result)
         self.showResultAutoSignal.connect(self.show_result_auto)
 
-        self.ui.Camera.clicked.connect(self.toggle_camera)
-        self.ui.Capture.clicked.connect(self.capture_image)
-        self.ui.LoadImage.clicked.connect(self.load_image)
-        self.ui.OpenFolder.clicked.connect(self.open_folder)
-        self.ui.AddModel.clicked.connect(self.add_model_config)
-        self.ui.SaveModel.clicked.connect(self.save_model_config)
-        self.ui.DeleteModel.clicked.connect(self.delete_model_config)
-        self.ui.model.currentIndexChanged.connect(self.load_model_config)
-        self.ui.listWidgetFile.itemSelectionChanged.connect(self.display_image)
+        self.ui.button_camera.clicked.connect(self.toggle_camera)
+        self.ui.button_capture.clicked.connect(self.capture_image)
+        self.ui.button_load_image.clicked.connect(self.load_image)
+        self.ui.button_open_folder.clicked.connect(self.open_folder)
+        self.ui.button_add_model.clicked.connect(self.add_model_config)
+        self.ui.button_save_model.clicked.connect(self.save_model_config)
+        self.ui.button_delete_model.clicked.connect(self.delete_model_config)
+        self.ui.combo_box_model.currentIndexChanged.connect(self.load_model_config)
+        self.ui.list_widget_file.itemSelectionChanged.connect(self.display_image)
 
         self.logInfoSignal.connect(self.view_log_info)
         self.server.logInfoSignal.connect(self.view_log_info)
@@ -127,9 +127,10 @@ class MainWindow(QMainWindow):
         self.current_socket = None
 
     def start_loop_auto(self):
+        """Khởi động camera và bắt đầu vòng lặp"""
         try:
             self.ui.button_start.setEnabled(False)
-            # Log thông báo
+
             # Khởi động server nếu chưa chạy
             self.start_server()
 
@@ -145,7 +146,6 @@ class MainWindow(QMainWindow):
     def stop_loop_auto(self):
         """Dừng vòng lặp xử lý và camera"""
         try:
-            # Log thông báo
             # Đặt cờ dừng vòng lặp
             self.b_stop_auto = True
 
@@ -153,6 +153,7 @@ class MainWindow(QMainWindow):
             if self.camera_thread:
                 self.camera_thread.stop_camera()
 
+            # Dừng server
             self.stop_server()
         except Exception as e:
             self.logInfoSignal.emit(f"Error stopping auto mode: {str(e)}")
@@ -213,7 +214,6 @@ class MainWindow(QMainWindow):
         self.logInfoSignal.emit("Auto processing stopped")
 
     def on_start_auto(self):
-        """Khởi động camera và bắt đầu vòng lặp xử lý"""
         self.start_loop_auto()
 
     def on_stop_auto(self):
@@ -227,7 +227,6 @@ class MainWindow(QMainWindow):
         self.server_running = False
         self.server.stop_server()
         self.logInfoSignal.emit("Stopped server")
-        # self.ui.button_start.setEnabled(True)
 
     def view_log_info(self, mess):
         self.ui.list_view_log.addItem(mess)
@@ -240,10 +239,10 @@ class MainWindow(QMainWindow):
         """Khởi tạo các tham số mặc định và options"""
         # Blur parameters
         self.blur_types = ["Gaussian Blur", "Median Blur", "Average Blur"]
-        self.ui.type_blur.addItems(self.blur_types)
-        self.ui.ksize.setRange(1, 31)
-        self.ui.ksize.setSingleStep(2)
-        self.ui.ksize.setValue(9)
+        self.ui.combo_box_type_blur.addItems(self.blur_types)
+        self.ui.spin_box_ksize.setRange(1, 31)
+        self.ui.spin_box_ksize.setSingleStep(2)
+        self.ui.spin_box_ksize.setValue(9)
 
         # Threshold parameters
         self.adaptive_thresh_types = ["Gaussian", "Mean"]
@@ -255,33 +254,35 @@ class MainWindow(QMainWindow):
             "To Zero Inverted",
         ]
 
-        self.ui.type_adaptive_thresh.addItems(self.adaptive_thresh_types)
-        self.ui.type_thresh.addItems(self.thresh_types)
+        self.ui.combo_box_type_adaptive_thresh.addItems(self.adaptive_thresh_types)
+        self.ui.combo_box_type_thresh.addItems(self.thresh_types)
 
-        self.ui.block_size.setRange(3, 255)
-        self.ui.block_size.setSingleStep(2)
-        self.ui.block_size.setValue(125)
+        self.ui.spin_box_block_size.setRange(3, 255)
+        self.ui.spin_box_block_size.setSingleStep(2)
+        self.ui.spin_box_block_size.setValue(125)
 
-        self.ui.c_index.setRange(-255, 255)
-        self.ui.c_index.setValue(9)
+        self.ui.spin_box_c_index.setRange(-255, 255)
+        self.ui.spin_box_c_index.setValue(9)
 
         # Morphological parameters
         self.morph_types = ["Erode", "Dilate", "Open", "Close"]
-        self.ui.morph.addItems(self.morph_types)
-        self.ui.kernel.setRange(1, 31)
-        self.ui.kernel.setSingleStep(2)
-        self.ui.kernel.setValue(5)
+        self.ui.combo_box_morph.addItems(self.morph_types)
+        self.ui.spin_box_kernel.setRange(1, 31)
+        self.ui.spin_box_kernel.setSingleStep(2)
+        self.ui.spin_box_kernel.setValue(5)
 
         # Contour parameters
         self.retrieval_modes_options = ["EXTERNAL", "LIST", "CCOMP", "TREE"]
         self.approximation_modes_options = ["NONE", "SIMPLE", "TC89_L1", "TC89_KCOS"]
 
-        self.ui.retrieval_modes.addItems(self.retrieval_modes_options)
-        self.ui.contour_approximation_modes.addItems(self.approximation_modes_options)
+        self.ui.combo_box_retrieval_modes.addItems(self.retrieval_modes_options)
+        self.ui.combo_box_contour_approximation_modes.addItems(
+            self.approximation_modes_options
+        )
 
         # Detection parameters
-        self.ui.area_min.setText("100000")
-        self.ui.area_max.setText("150000")
+        self.ui.line_edit_area_min.setText("100000")
+        self.ui.line_edit_area_max.setText("150000")
         self.ui.distance.setRange(0, 100)
         self.ui.distance.setValue(15)
 
@@ -292,30 +293,30 @@ class MainWindow(QMainWindow):
             config = {
                 # Blur parameters
                 "blur": {
-                    "type": self.ui.type_blur.currentText(),
-                    "ksize": self.ui.ksize.value(),
+                    "type": self.ui.combo_box_type_blur.currentText(),
+                    "ksize": self.ui.spin_box_ksize.value(),
                 },
                 # Threshold parameters
                 "threshold": {
-                    "adaptive_type": self.ui.type_adaptive_thresh.currentText(),
-                    "thresh_type": self.ui.type_thresh.currentText(),
-                    "block_size": self.ui.block_size.value(),
-                    "c_index": self.ui.c_index.value(),
+                    "adaptive_type": self.ui.combo_box_type_adaptive_thresh.currentText(),
+                    "thresh_type": self.ui.combo_box_type_thresh.currentText(),
+                    "block_size": self.ui.spin_box_block_size.value(),
+                    "c_index": self.ui.spin_box_c_index.value(),
                 },
                 # Morphological parameters
                 "morphological": {
-                    "type": self.ui.morph.currentText(),
-                    "kernel_size": self.ui.kernel.value(),
+                    "type": self.ui.combo_box_morph.currentText(),
+                    "kernel_size": self.ui.spin_box_kernel.value(),
                 },
                 # Contour parameters
                 "contour": {
-                    "retrieval_mode": self.ui.retrieval_modes.currentText(),
-                    "approximation_mode": self.ui.contour_approximation_modes.currentText(),
+                    "retrieval_mode": self.ui.combo_box_retrieval_modes.currentText(),
+                    "approximation_mode": self.ui.combo_box_contour_approximation_modes.currentText(),
                 },
                 # Detection parameters
                 "detection": {
-                    "area_min": self.ui.area_min.text(),
-                    "area_max": self.ui.area_max.text(),
+                    "area_min": self.ui.line_edit_area_min.text(),
+                    "area_max": self.ui.line_edit_area_max.text(),
                     "distance": self.ui.distance.value(),
                 },
                 "shapes": {
@@ -335,55 +336,63 @@ class MainWindow(QMainWindow):
         try:
             # Blur parameters
             if "blur" in config:
-                blur_index = self.ui.type_blur.findText(config["blur"]["type"])
+                blur_index = self.ui.combo_box_type_blur.findText(
+                    config["blur"]["type"]
+                )
                 if blur_index >= 0:
-                    self.ui.type_blur.setCurrentIndex(blur_index)
-                self.ui.ksize.setValue(config["blur"]["ksize"])
+                    self.ui.combo_box_type_blur.setCurrentIndex(blur_index)
+                self.ui.spin_box_ksize.setValue(config["blur"]["ksize"])
 
             # Threshold parameters
             if "threshold" in config:
-                adaptive_index = self.ui.type_adaptive_thresh.findText(
+                adaptive_index = self.ui.combo_box_type_adaptive_thresh.findText(
                     config["threshold"]["adaptive_type"]
                 )
                 if adaptive_index >= 0:
-                    self.ui.type_adaptive_thresh.setCurrentIndex(adaptive_index)
+                    self.ui.combo_box_type_adaptive_thresh.setCurrentIndex(
+                        adaptive_index
+                    )
 
-                thresh_index = self.ui.type_thresh.findText(
+                thresh_index = self.ui.combo_box_type_thresh.findText(
                     config["threshold"]["thresh_type"]
                 )
                 if thresh_index >= 0:
-                    self.ui.type_thresh.setCurrentIndex(thresh_index)
+                    self.ui.combo_box_type_thresh.setCurrentIndex(thresh_index)
 
-                self.ui.block_size.setValue(config["threshold"]["block_size"])
-                self.ui.c_index.setValue(config["threshold"]["c_index"])
+                self.ui.spin_box_block_size.setValue(config["threshold"]["block_size"])
+                self.ui.spin_box_c_index.setValue(config["threshold"]["c_index"])
 
             # Morphological parameters
             if "morphological" in config:
-                morph_index = self.ui.morph.findText(config["morphological"]["type"])
+                morph_index = self.ui.combo_box_morph.findText(
+                    config["morphological"]["type"]
+                )
                 if morph_index >= 0:
-                    self.ui.morph.setCurrentIndex(morph_index)
-                self.ui.kernel.setValue(config["morphological"]["kernel_size"])
+                    self.ui.combo_box_morph.setCurrentIndex(morph_index)
+                self.ui.spin_box_kernel.setValue(config["morphological"]["kernel_size"])
 
             # Contour parameters
             if "contour" in config:
-                retrieval_index = self.ui.retrieval_modes.findText(
+                retrieval_index = self.ui.combo_box_retrieval_modes.findText(
                     config["contour"]["retrieval_mode"]
                 )
                 if retrieval_index >= 0:
-                    self.ui.retrieval_modes.setCurrentIndex(retrieval_index)
+                    self.ui.combo_box_retrieval_modes.setCurrentIndex(retrieval_index)
 
-                approximation_index = self.ui.contour_approximation_modes.findText(
-                    config["contour"]["approximation_mode"]
+                approximation_index = (
+                    self.ui.combo_box_contour_approximation_modes.findText(
+                        config["contour"]["approximation_mode"]
+                    )
                 )
                 if approximation_index >= 0:
-                    self.ui.contour_approximation_modes.setCurrentIndex(
+                    self.ui.combo_box_contour_approximation_modes.setCurrentIndex(
                         approximation_index
                     )
 
             # Detection parameters
             if "detection" in config:
-                self.ui.area_min.setText(str(config["detection"]["area_min"]))
-                self.ui.area_max.setText(str(config["detection"]["area_max"]))
+                self.ui.line_edit_area_min.setText(str(config["detection"]["area_min"]))
+                self.ui.line_edit_area_max.setText(str(config["detection"]["area_max"]))
                 self.ui.distance.setValue(config["detection"]["distance"])
 
             self.canvasOriginalImage.shapes.clear()
@@ -440,8 +449,8 @@ class MainWindow(QMainWindow):
             # Get current configuration and save
             config = self.get_config()
             if self.settings.save_model(model_name, config):
-                self.ui.model.addItem(model_name)
-                self.ui.model.setCurrentText(model_name)
+                self.ui.combo_box_model.addItem(model_name)
+                self.ui.combo_box_model.setCurrentText(model_name)
                 self.statusBar().showMessage(
                     f"New model '{model_name}' created successfully", 5000
                 )
@@ -454,7 +463,7 @@ class MainWindow(QMainWindow):
     def delete_model_config(self):
         """Delete configuration of current model"""
         try:
-            model_name = self.ui.model.currentText()
+            model_name = self.ui.combo_box_model.currentText()
             if not model_name:
                 QMessageBox.warning(self, "Warning", "Please select a model to delete")
                 return
@@ -472,7 +481,9 @@ class MainWindow(QMainWindow):
 
             # Delete model
             if self.settings.delete_model(model_name):
-                self.ui.model.removeItem(self.ui.model.currentIndex())
+                self.ui.combo_box_model.removeItem(
+                    self.ui.combo_box_model.currentIndex()
+                )
                 QMessageBox.information(
                     self, "Success", f"Model '{model_name}' deleted successfully"
                 )
@@ -488,7 +499,7 @@ class MainWindow(QMainWindow):
     def load_model_config(self):
         """Load configuration from selected model"""
         try:
-            model_name = self.ui.model.currentText()
+            model_name = self.ui.combo_box_model.currentText()
             if not model_name:
                 return
 
@@ -511,7 +522,7 @@ class MainWindow(QMainWindow):
     def save_model_config(self):
         """Save configuration to current model"""
         try:
-            model_name = self.ui.model.currentText()
+            model_name = self.ui.combo_box_model.currentText()
             if not model_name:
                 QMessageBox.warning(self, "Warning", "Please select a model to save to")
                 return
@@ -546,10 +557,10 @@ class MainWindow(QMainWindow):
     def update_model_list(self):
         """Update the model combobox with available model configurations"""
         try:
-            self.ui.model.clear()
+            self.ui.combo_box_model.clear()
             model_names = self.settings.get_model_names()
             if model_names:
-                self.ui.model.addItems(sorted(model_names))
+                self.ui.combo_box_model.addItems(sorted(model_names))
                 self.load_model_config()
         except Exception as e:
             print(f"Error updating model list: {str(e)}")
@@ -566,7 +577,7 @@ class MainWindow(QMainWindow):
             config = self.get_config()
             ret: RESULT = self.process_image(mat=self.current_image, config=config)
             if ret is not None:
-                self.showResultSignal.emit(ret)
+                self.showResultTechingSignal.emit(ret)
 
             if self.b_stop:
                 break
@@ -640,17 +651,17 @@ class MainWindow(QMainWindow):
         """Toggle camera state between running and stopped"""
         if not self.camera_thread or not self.camera_thread.isRunning():
             self.start_camera()
-            self.ui.Camera.setText("Stop Camera")
-            self.ui.LoadImage.setEnabled(False)
-            self.ui.OpenFolder.setEnabled(False)
-            self.ui.Capture.setEnabled(True)
+            self.ui.button_camera.setText("Stop Camera")
+            self.ui.button_load_image.setEnabled(False)
+            self.ui.button_open_folder.setEnabled(False)
+            self.ui.button_capture.setEnabled(True)
             self.is_camera_active = True
         else:
             self.stop_camera()
-            self.ui.Camera.setText("Start Camera")
-            self.ui.LoadImage.setEnabled(True)
-            self.ui.OpenFolder.setEnabled(True)
-            self.ui.Capture.setEnabled(False)
+            self.ui.button_camera.setText("Start Camera")
+            self.ui.button_load_image.setEnabled(True)
+            self.ui.button_open_folder.setEnabled(True)
+            self.ui.button_capture.setEnabled(False)
             self.is_camera_active = False
             # Clear the current image when stopping camera
             with self.processing_lock:
@@ -662,7 +673,7 @@ class MainWindow(QMainWindow):
     def start_camera(self):
         """Start the camera and return success status"""
         try:
-            self.ui.listWidgetFile.clear()
+            self.ui.list_widget_file.clear()
             self.camera_thread = CameraThread()
             self.camera_thread.frameCaptured.connect(self.update_frame)
             self.camera_thread.open_camera()
@@ -730,7 +741,7 @@ class MainWindow(QMainWindow):
             if self.is_camera_active:
                 self.toggle_camera()
 
-            self.ui.listWidgetFile.clear()
+            self.ui.list_widget_file.clear()
 
             file_dialog = QFileDialog()
             file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
@@ -764,7 +775,7 @@ class MainWindow(QMainWindow):
         if folder_path:
             # Lấy danh sách file ảnh từ thư mục
             self.file_paths.clear()  # Xóa dữ liệu cũ
-            self.ui.listWidgetFile.clear()  # Xóa mục cũ trong QListWidget
+            self.ui.list_widget_file.clear()  # Xóa mục cũ trong QListWidget
             image_extensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif"]
             for file_name in os.listdir(folder_path):
                 if any(file_name.lower().endswith(ext) for ext in image_extensions):
@@ -773,14 +784,14 @@ class MainWindow(QMainWindow):
 
                     # Thêm mục mới vào QListWidget
                     list_item = QListWidgetItem(file_name)
-                    self.ui.listWidgetFile.addItem(list_item)
+                    self.ui.list_widget_file.addItem(list_item)
 
     def display_image(self):
         # Display the current image in the viewer
-        selected_items = self.ui.listWidgetFile.selectedItems()
+        selected_items = self.ui.list_widget_file.selectedItems()
         if selected_items:
             item = selected_items[0]
-            index = self.ui.listWidgetFile.row(item)
+            index = self.ui.list_widget_file.row(item)
             file_path = self.file_paths[index]
             with self.processing_lock:
                 self.current_image = cv.imread(file_path)
