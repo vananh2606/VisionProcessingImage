@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
 
     def setup_connections(self):
         """Set up signal-slot connections"""
-        self.showResultTechingSignal.connect(self.show_result)
+        self.showResultTechingSignal.connect(self.show_result_teaching)
         self.showResultAutoSignal.connect(self.show_result_auto)
 
         self.ui.button_camera.clicked.connect(self.toggle_camera)
@@ -310,7 +310,9 @@ class MainWindow(QMainWindow):
         self.ui.spin_box_min_dist.setRange(0, 100)
         self.ui.spin_box_min_dist.setValue(8)
 
+        self.ui.spin_box_param1.setRange(0, 255)
         self.ui.spin_box_param1.setValue(50)
+        self.ui.spin_box_param2.setRange(0, 200)
         self.ui.spin_box_param2.setValue(20)
 
         self.ui.spin_box_min_radius.setValue(1)
@@ -705,29 +707,15 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Error updating UI: {str(e)}")
 
-    def show_result(self, result: RESULT):
-        """
-        Updates the UI with original and processed images while maintaining aspect ratio
-        and proper scaling.
-
-        Args:
-            original (np.ndarray): Original image
-            processed (np.ndarray): Processed image (binary/grayscale)
-        """
+    def show_result_teaching(self, result: RESULT):
         try:
             # Convert and scale the original image
             if result.dst is not None:
                 self.canvasOutputImage.load_pixmap(ndarray2pixmap(result.dst))
 
             # Convert and scale the processed image
-            if isinstance(result, BLOBS):
-                if result.mbin is not None:
-                    self.canvasProcessingImage.load_pixmap(ndarray2pixmap(result.mbin))
-            else:
-                if result.blobs.mbin is not None:
-                    self.canvasProcessingImage.load_pixmap(
-                        ndarray2pixmap(result.blobs.mbin)
-                    )
+            if result.mbin is not None:
+                self.canvasProcessingImage.load_pixmap(ndarray2pixmap(result.mbin))
 
         except Exception as e:
             print(f"Error updating UI: {str(e)}")

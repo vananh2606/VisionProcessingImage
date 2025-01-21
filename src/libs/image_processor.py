@@ -127,7 +127,7 @@ class ImageProcessor:
                 if b_debug:
                     cv.rectangle(dst, (x, y), (x + w, y + h), (0, 255, 0), 5)
 
-        return BLOBS(boxs=boxs, contours=contours, dst=dst, mbin=mbin)
+        return BLOBS(dst=dst, mbin=mbin, boxs=boxs, contours=contours)
 
     @staticmethod
     def find_circles(src, roi, config: dict, b_debug=False):
@@ -171,7 +171,6 @@ class ImageProcessor:
 
         # rows = gray.shape[0]
 
-        # Phát hiện circle
         circles = cv.HoughCircles(
             blurred,
             method,
@@ -210,7 +209,7 @@ class ImageProcessor:
             vector = (vector[0] + roi[0], vector[1] + roi[1])
 
             return BLOBS(
-                circles=ret, vectors=[vector], src=cropped_image, dst=dst, roi=roi
+                src=cropped_image, dst=dst, circles=ret, vectors=[vector], roi=roi
             )
         else:
             return BLOBS(src=cropped_image, dst=cropped_image)
@@ -243,7 +242,7 @@ class ImageProcessor:
         dst = src.copy()
         dst = ImageProcessor.draw_output(dst, blobs)
 
-        return RESULT(src=src, dst=dst, blobs=blobs)
+        return RESULT(src=src, dst=dst, mbin=blobs.mbin, blobs=blobs)
 
     def draw_output(mat, blobs: BLOBS, color=(0, 255, 0), lw=5):
         boxs = blobs.boxs
@@ -271,9 +270,7 @@ class ImageProcessor:
 
     def filter_circle(img_size, circles):
         w, h = img_size
-        # xd tam anh
         center = w / 2, h / 2
-        # tim circle_0 co tam gan tam anh nhat
         min_distance = 0.0
 
         if len(circles) < 2:
@@ -292,8 +289,8 @@ class ImageProcessor:
 
         circles.remove(circle_0)
 
-        # tim circle_1 gan circle_0 nhat
         center_circle_0 = (circle_0[0], circle_0[1])
+
         circle_1 = circles[0]
         c = (circles[0][0], circles[0][1])
         min_distance = ImageProcessor.cal_distance(c, center_circle_0)
