@@ -4,8 +4,8 @@ from collections import namedtuple
 
 BLOBS = namedtuple(
     "blobs",
-    ["src", "dst", "mbin", "roi", "contours", "boxs", "circles", "vectors"],
-    defaults=[None, None, None, None, [], [], [], []],
+    ["src", "dst", "mbin", "roi", "contours", "boxes", "circles", "vectors", "centers"],
+    defaults=[None, None, None, None, [], [], [], [], []],
 )
 
 RESULT = namedtuple(
@@ -111,7 +111,7 @@ class ImageProcessor:
         max_distance = config["detection"]["distance"]
 
         contours = []
-        boxs = []
+        boxes = []
 
         dst = None
         if b_debug:
@@ -122,12 +122,12 @@ class ImageProcessor:
             area = w * h
             if min_area <= area <= max_area and abs(w - h) < max_distance:
                 contours.append(cnt)
-                boxs.append([x, y, w, h])
+                boxes.append([x, y, w, h])
 
                 if b_debug:
                     cv.rectangle(dst, (x, y), (x + w, y + h), (0, 255, 0), 5)
 
-        return BLOBS(dst=dst, mbin=mbin, boxs=boxs, contours=contours)
+        return BLOBS(dst=dst, mbin=mbin, boxes=boxes, contours=contours)
 
     @staticmethod
     def find_circles(src, roi, config: dict, b_debug=False):
@@ -201,15 +201,22 @@ class ImageProcessor:
                 x1, y1, _ = ret[1]
 
                 vector = (x1 - x0, y1 - y0)
+                center = (x0, y0)
                 if b_debug:
                     cv.arrowedLine(dst, (x0, y0), (x1, y1), (0, 255, 0), 3)
 
             # map to global image
             ret = [(x + roi[0], y + roi[1], r) for x, y, r in ret]
             vector = (vector[0] + roi[0], vector[1] + roi[1])
+            center = (center[0] + roi[0], center[1] + roi[1])
 
             return BLOBS(
-                src=cropped_image, dst=dst, circles=ret, vectors=[vector], roi=roi
+                src=cropped_image,
+                dst=dst,
+                roi=roi,
+                circles=ret,
+                vectors=[vector],
+                centers=[center],
             )
         else:
             return BLOBS(src=cropped_image, dst=cropped_image)
@@ -219,24 +226,28 @@ class ImageProcessor:
         # find_blobs
         blobs: BLOBS = ImageProcessor.find_blobs(src, config)
 
-        vectors = []
         circles = []
+        vectors = []
+        centers = []
 
-        for box in blobs.boxs:
+        for box in blobs.boxes:
             blob_circles: BLOBS = ImageProcessor.find_circles(src, box, config)
             circles.append(blob_circles.circles)
 
             if blob_circles.circles:
                 vectors.append(blob_circles.vectors[0])
+                centers.append(blob_circles.centers[0])
             else:
                 vectors.append(None)
+                centers.append(None)
 
         blobs = BLOBS(
+            mbin=blobs.mbin,
+            contours=blobs.contours,
+            boxes=blobs.boxes,
             circles=circles,
             vectors=vectors,
-            contours=blobs.contours,
-            boxs=blobs.boxs,
-            mbin=blobs.mbin,
+            centers=centers,
         )
 
         dst = src.copy()
@@ -245,10 +256,10 @@ class ImageProcessor:
         return RESULT(src=src, dst=dst, mbin=blobs.mbin, blobs=blobs)
 
     def draw_output(mat, blobs: BLOBS, color=(0, 255, 0), lw=5):
-        boxs = blobs.boxs
+        boxes = blobs.boxes
         circles = blobs.circles
 
-        for box in boxs:
+        for box in boxes:
             x, y, w, h = box
             cv.rectangle(mat, (x, y), (x + w, y + h), color, lw)
 

@@ -812,4 +812,4 @@ if __name__ == "__main__":
     # wd.setCentralWidget(canvas)
     canvas.showMaximized()
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

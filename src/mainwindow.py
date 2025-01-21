@@ -82,6 +82,8 @@ class MainWindow(QMainWindow):
         self.image_converter = ImageConverter()
         self.settings = Settings()
 
+        self.result: RESULT = RESULT()
+
         self.update_model_list()
         self.start_loop_process()
 
@@ -321,6 +323,7 @@ class MainWindow(QMainWindow):
     def get_config(self) -> dict:
         """Get current configuration from UI parameters"""
         shapes: list[Shape] = self.canvasOriginalImage.shapes
+        # blobs: BLOBS =
         try:
             config = {
                 # Blur parameters
@@ -351,10 +354,12 @@ class MainWindow(QMainWindow):
                     "area_max": self.ui.line_edit_area_max.text(),
                     "distance": self.ui.distance.value(),
                 },
+                # Shape
                 "shapes": {
                     i: {"label": shapes[i].label, "box": shapes[i].cvBox}
                     for i in range(len(shapes))
                 },
+                # Hough Circle
                 "hough_circle": {
                     "type_blur_hough": self.ui.combo_box_type_blur_hough.currentText(),
                     "ksize_hough": self.ui.spin_box_ksize_hough.value(),
@@ -365,6 +370,17 @@ class MainWindow(QMainWindow):
                     "param2": self.ui.spin_box_param2.value(),
                     "min_radius": self.ui.spin_box_min_radius.value(),
                     "max_radius": self.ui.spin_box_max_radius.value(),
+                },
+                # Blobs
+                "blobs": {
+                    "vectors": {
+                        i: self.result.blobs.vectors[i]
+                        for i in range(len(self.result.blobs.vectors))
+                    },
+                    "centers": {
+                        i: self.result.blobs.centers[i]
+                        for i in range(len(self.result.blobs.centers))
+                    },
                 },
             }
             return config
@@ -479,6 +495,13 @@ class MainWindow(QMainWindow):
                 self.ui.spin_box_param2.setValue(hough_config.get("param2", 20))
                 self.ui.spin_box_min_radius.setValue(hough_config.get("min_radius", 1))
                 self.ui.spin_box_max_radius.setValue(hough_config.get("max_radius", 20))
+
+            # Blobs
+            if "blobs" in config:
+                for i in range(len(config["blobs"]["vectors"])):
+                    print(f"Vectors {i}: {config["blobs"]["vectors"].get(str(i))}")
+                for i in range(len(config["blobs"]["centers"])):
+                    print(f"Centers {i}: {config["blobs"]["vectors"].get(str(i))}")
 
             # Process image with new configuration
         except Exception as e:
@@ -669,6 +692,7 @@ class MainWindow(QMainWindow):
                     result: RESULT = self.image_processor.find_result(mat, config)
 
                     # print("Time Processing: ", time.time() - time_start)
+                    self.result = result
                     return result
 
                 if process_name == "FindBlobs":
