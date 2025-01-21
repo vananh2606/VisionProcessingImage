@@ -17,48 +17,9 @@ class Settings:
         "detection": {"area_min": "100000", "area_max": "150000", "distance": 15},
     }
 
-    UI_PARAMETERS = {
-        "blur": {
-            "types": ["Gaussian Blur", "Median Blur", "Average Blur"],
-            "ksize_range": (1, 31),
-            "ksize_step": 2,
-        },
-        "threshold": {
-            "adaptive_types": ["Gaussian", "Mean"],
-            "thresh_types": [
-                "Binary",
-                "Binary Inverted",
-                "Truncate",
-                "To Zero",
-                "To Zero Inverted",
-            ],
-            "block_size_range": (3, 255),
-            "block_size_step": 2,
-            "c_index_range": (-255, 255),
-        },
-        "morphological": {
-            "types": ["Erode", "Dilate", "Open", "Close"],
-            "kernel_range": (1, 31),
-            "kernel_step": 2,
-        },
-        "contour": {
-            "retrieval_modes": ["EXTERNAL", "LIST", "CCOMP", "TREE"],
-            "approximation_modes": ["NONE", "SIMPLE", "TC89_L1", "TC89_KCOS"],
-        },
-        "detection": {
-            "distance_range": (0, 100),
-        },
-    }
-
     def __init__(self):
         self.models_dir = os.path.join("models")
         os.makedirs(self.models_dir, exist_ok=True)
-
-    def get_ui_parameter(self):
-        return self.UI_PARAMETERS
-
-    def get_default_config(self):
-        return self.DEFAULT_CONFIG
 
     def get_model_names(self) -> list:
         """Get list of available model names"""

@@ -57,7 +57,7 @@ class Shape(object):
         self._b_hide = val
 
     def drawVertex(self, path, i):
-        d = max(int(Shape.RADIUS / self.scale), 10)
+        d = Shape.RADIUS
         point = self.points[i]
         if self.corner is not None and i == self.corner:
             path.addRect(point.x() - d, point.y() - d, 2 * d, 2 * d)
@@ -71,7 +71,7 @@ class Shape(object):
             return
         self.scale = s
         color = QColor("green")
-        lw = max(int(Shape.THICKNESS / self.scale), 1)
+        lw = Shape.THICKNESS
         painter.setPen(QPen(color, lw))
         line_path = QPainterPath()
         vertex_path = QPainterPath()
@@ -87,7 +87,7 @@ class Shape(object):
         painter.drawPath(line_path)
         # draw label
         if self.label is not None:
-            fs = max(int(Shape.FONT_SIZE / self.scale), 20)
+            fs = Shape.FONT_SIZE
             font = QFont("Arial", fs)
             painter.setFont(font)
             painter.drawText(int(self[0].x()) - 1, int(self[0].y()) - 1, self.label)

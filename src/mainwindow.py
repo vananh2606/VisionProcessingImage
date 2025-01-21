@@ -23,7 +23,7 @@ from collections import namedtuple
 from libs.settings import Settings
 from libs.camera_thread import CameraThread
 from libs.image_converter import ImageConverter
-from libs.image_processor import ImageProcessor
+from libs.image_processor import ImageProcessor, RESULT, BLOBS
 from gui.MainWindowUI_ui import Ui_MainWindow
 from libs.canvas import Canvas, WindowCanvas
 from libs.shape import Shape
@@ -38,15 +38,9 @@ STEP_PROCESS = "STEP_PROCESS"
 STEP_OUTPUT = "STEP_OUTPUT"
 STEP_RELEASE = "STEP_RELEASE"
 
-RESULT = namedtuple(
-    "result",
-    ["src", "dst", "mbin", "ret", "msg"],
-    defaults=[None, None, None, True, ""],
-)
-
 
 class MainWindow(QMainWindow):
-    showResultTechingSignal = pyqtSignal(RESULT)
+    showResultTechingSignal = pyqtSignal(object)
     showResultAutoSignal = pyqtSignal(RESULT)
     logInfoSignal = pyqtSignal(str)
 
@@ -69,9 +63,9 @@ class MainWindow(QMainWindow):
         self.canvasProcessingImage = Canvas()
         self.canvasOutputImage = Canvas()
 
-        self.ui.ScreenTeaching.addWidget(WindowCanvas(self.canvasOriginalImage))
-        self.ui.ScreenTeaching.addWidget(WindowCanvas(self.canvasProcessingImage))
-        self.ui.ScreenTeaching.addWidget(WindowCanvas(self.canvasOutputImage))
+        self.ui.SRC.addWidget(WindowCanvas(self.canvasOriginalImage))
+        self.ui.MBIN.addWidget(WindowCanvas(self.canvasProcessingImage))
+        self.ui.DST.addWidget(WindowCanvas(self.canvasOutputImage))
 
         self.canvasOutputImageAuto = Canvas()
         self.ui.ScreenAuto.addWidget(WindowCanvas(self.canvasOutputImageAuto))
@@ -237,6 +231,10 @@ class MainWindow(QMainWindow):
 
     def initialize_parameters(self):
         """Khởi tạo các tham số mặc định và options"""
+
+        """
+        Detection Roi
+        """
         # Blur parameters
         self.blur_types = ["Gaussian Blur", "Median Blur", "Average Blur"]
         self.ui.combo_box_type_blur.addItems(self.blur_types)
@@ -286,6 +284,38 @@ class MainWindow(QMainWindow):
         self.ui.distance.setRange(0, 100)
         self.ui.distance.setValue(15)
 
+        """
+        Hough Circle
+        """
+        # Blur parameters hough
+        self.blur_types = ["Gaussian Blur", "Median Blur", "Average Blur"]
+        self.ui.combo_box_type_blur_hough.addItems(self.blur_types)
+        self.ui.spin_box_ksize_hough.setRange(1, 31)
+        self.ui.spin_box_ksize_hough.setSingleStep(2)
+        self.ui.spin_box_ksize_hough.setValue(9)
+
+        # Hough parameters
+        self.hough_type = [
+            "HOUGH_STANDARD",
+            "HOUGH_PROBABILISTIC",
+            "HOUGH_MULTI_SCALE",
+            "HOUGH_GRADIENT",
+            "HOUGH_GRADIENT_ALT",
+        ]
+        self.ui.combo_box_type_hough.addItems(self.hough_type)
+
+        self.ui.spin_box_dp.setRange(1, 3)
+        self.ui.spin_box_dp.setValue(1)
+
+        self.ui.spin_box_min_dist.setRange(0, 100)
+        self.ui.spin_box_min_dist.setValue(8)
+
+        self.ui.spin_box_param1.setValue(50)
+        self.ui.spin_box_param2.setValue(20)
+
+        self.ui.spin_box_min_radius.setValue(1)
+        self.ui.spin_box_max_radius.setValue(20)
+
     def get_config(self) -> dict:
         """Get current configuration from UI parameters"""
         shapes: list[Shape] = self.canvasOriginalImage.shapes
@@ -322,6 +352,17 @@ class MainWindow(QMainWindow):
                 "shapes": {
                     i: {"label": shapes[i].label, "box": shapes[i].cvBox}
                     for i in range(len(shapes))
+                },
+                "hough_circle": {
+                    "type_blur_hough": self.ui.combo_box_type_blur_hough.currentText(),
+                    "ksize_hough": self.ui.spin_box_ksize_hough.value(),
+                    "type_hough": self.ui.combo_box_type_hough.currentText(),
+                    "dp": self.ui.spin_box_dp.value(),
+                    "min_dist": self.ui.spin_box_min_dist.value(),
+                    "param1": self.ui.spin_box_param1.value(),
+                    "param2": self.ui.spin_box_param2.value(),
+                    "min_radius": self.ui.spin_box_min_radius.value(),
+                    "max_radius": self.ui.spin_box_max_radius.value(),
                 },
             }
             return config
@@ -395,6 +436,7 @@ class MainWindow(QMainWindow):
                 self.ui.line_edit_area_max.setText(str(config["detection"]["area_max"]))
                 self.ui.distance.setValue(config["detection"]["distance"])
 
+            # Shape
             self.canvasOriginalImage.shapes.clear()
             if "shapes" in config:
                 shapes: dict = config["shapes"]
@@ -409,6 +451,32 @@ class MainWindow(QMainWindow):
                         QPointF(x, y + h),
                     ]
                     self.canvasOriginalImage.shapes.append(s)
+
+            # Hough Circle
+            if "hough_circle" in config:
+                blur_hough_index = self.ui.combo_box_type_blur_hough.findText(
+                    config["hough_circle"]["type_blur_hough"]
+                )
+                if blur_hough_index >= 0:
+                    self.ui.combo_box_type_blur_hough.setCurrentIndex(blur_index)
+                self.ui.spin_box_ksize_hough.setValue(
+                    config["hough_circle"]["ksize_hough"]
+                )
+
+                hough_index = self.ui.combo_box_type_hough.findText(
+                    config["hough_circle"]["type_hough"]
+                )
+                if hough_index >= 0:
+                    self.ui.combo_box_type_hough.setCurrentIndex(hough_index)
+
+                hough_config = config.get("hough_circle", {})
+
+                self.ui.spin_box_dp.setValue(hough_config.get("dp", 1))
+                self.ui.spin_box_min_dist.setValue(hough_config.get("min_dist", 8))
+                self.ui.spin_box_param1.setValue(hough_config.get("param1", 50))
+                self.ui.spin_box_param2.setValue(hough_config.get("param2", 20))
+                self.ui.spin_box_min_radius.setValue(hough_config.get("min_radius", 1))
+                self.ui.spin_box_max_radius.setValue(hough_config.get("max_radius", 20))
 
             # Process image with new configuration
         except Exception as e:
@@ -592,29 +660,40 @@ class MainWindow(QMainWindow):
 
         with self.processing_lock:
             try:
-                # Convert to grayscale
-                gray = cv.cvtColor(mat, cv.COLOR_BGR2GRAY)
+                process_name = self.ui.combo_box_process_name.currentText()
 
-                # Apply blur
-                blur = self.image_processor.apply_blur(gray, config)
+                if process_name == "ProcessAll":
+                    # Find and draw contours
+                    result: RESULT = self.image_processor.find_result(mat, config)
 
-                # Apply threshold
-                thresh = self.image_processor.apply_threshold(blur, config)
+                    # print("Time Processing: ", time.time() - time_start)
+                    return result
 
-                # Apply morphological operations
-                morph = self.image_processor.apply_morphological(thresh, config)
+                if process_name == "FindBlobs":
+                    # Find and draw contours
+                    result: BLOBS = self.image_processor.find_blobs(
+                        mat, config, b_debug=True
+                    )
 
-                # Find and draw contours
-                result = self.image_processor.process_contours(mat, morph, config)
+                    # print("Time Processing: ", time.time() - time_start)
+                    return result
 
-                #
-                msg = "OK"
+                if process_name == "FindCircles":
+                    # Find and draw contours
+                    index = self.canvasOriginalImage.idSelected
+                    if index is not None:
+                        current_shape: Shape = self.canvasOriginalImage[index]
+                        roi = current_shape.cvBox
 
-                # print("Time Processing: ", time.time() - time_start)
-                # return result, morph
-                return RESULT(src=mat, dst=result, mbin=morph, ret=True, msg=msg)
+                        result: BLOBS = self.image_processor.find_circles(
+                            mat, roi, config, b_debug=True
+                        )
+
+                    # print("Time Processing: ", time.time() - time_start)
+                    return result
+
             except Exception as e:
-                print(f"Error processing image: {str(e)}")
+                print(f"[{time.strftime('%H:%M:%S')}][process_image][ERROR]: {str(e)}")
                 return None
 
     def show_result_auto(self, result: RESULT):
@@ -641,8 +720,14 @@ class MainWindow(QMainWindow):
                 self.canvasOutputImage.load_pixmap(ndarray2pixmap(result.dst))
 
             # Convert and scale the processed image
-            if result.mbin is not None:
-                self.canvasProcessingImage.load_pixmap(ndarray2pixmap(result.mbin))
+            if isinstance(result, BLOBS):
+                if result.mbin is not None:
+                    self.canvasProcessingImage.load_pixmap(ndarray2pixmap(result.mbin))
+            else:
+                if result.blobs.mbin is not None:
+                    self.canvasProcessingImage.load_pixmap(
+                        ndarray2pixmap(result.blobs.mbin)
+                    )
 
         except Exception as e:
             print(f"Error updating UI: {str(e)}")

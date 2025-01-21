@@ -237,7 +237,7 @@ class Canvas(QLabel):
                 self.actions.lock.setText("Lock")
 
         if self.bcontext_menu:
-            self.contextMenu.exec_(QCursor.pos())
+            self.contextMenu.exec(QCursor.pos())
 
     def emitAction(self, name):
         self.actionSignal.emit(name)
@@ -321,7 +321,7 @@ class Canvas(QLabel):
         """
         convert main pos -> cv pos
         """
-        return (QPointF(pos) - self.org) / self.scale
+        return (QPointF(pos) - self.org) / max(self.scale, 1e-5)
 
     def move_org(self, point):
         self.org += point
@@ -543,7 +543,7 @@ class Canvas(QLabel):
         mods = ev.modifiers()
         # if Qt.ControlModifier == int(mods) and v_delta:
         if v_delta:
-            self.zoom_by_wheel(1 + v_delta / 120 * 0.2)
+            self.zoom_by_wheel(1 + v_delta / 120 * 0.1)
         # else:
         #     pos = QPointF(0.,v_delta/8.)
         #     self.move_org(pos)
