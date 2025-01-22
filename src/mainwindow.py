@@ -77,15 +77,15 @@ class MainWindow(QMainWindow):
         self.current_socket = None
         self.b_trigger = False
         self.b_stop_auto = False
+        self.b_origin = False
 
         self.image_processor = ImageProcessor()
         self.image_converter = ImageConverter()
         self.settings = Settings()
 
-        self.result: RESULT = RESULT()
+        self.origin_result: RESULT = RESULT()
 
         self.update_model_list()
-        self.start_loop_process()
 
     def setup_connections(self):
         """Set up signal-slot connections"""
@@ -101,6 +101,9 @@ class MainWindow(QMainWindow):
         self.ui.button_delete_model.clicked.connect(self.delete_model_config)
         self.ui.combo_box_model.currentIndexChanged.connect(self.load_model_config)
         self.ui.list_widget_file.itemSelectionChanged.connect(self.display_image)
+        self.ui.button_start_teaching.clicked.connect(self.on_start_teaching)
+        self.ui.button_stop_teaching.clicked.connect(self.on_stop_teaching)
+        self.ui.button_set_origin.clicked.connect(self.on_set_origin_teaching)
 
         self.logInfoSignal.connect(self.view_log_info)
         self.server.logInfoSignal.connect(self.view_log_info)
@@ -373,14 +376,11 @@ class MainWindow(QMainWindow):
                 },
                 # Blobs
                 "blobs": {
-                    "vectors": {
-                        i: self.result.blobs.vectors[i]
-                        for i in range(len(self.result.blobs.vectors))
-                    },
-                    "centers": {
-                        i: self.result.blobs.centers[i]
-                        for i in range(len(self.result.blobs.centers))
-                    },
+                    str(i): {
+                        "center": self.origin_result.blobs.centers[i],
+                        "vector": self.origin_result.blobs.vectors[i],
+                    }
+                    for i in range(len(self.origin_result.blobs.centers))
                 },
             }
             return config
@@ -498,10 +498,12 @@ class MainWindow(QMainWindow):
 
             # Blobs
             if "blobs" in config:
-                for i in range(len(config["blobs"]["vectors"])):
-                    print(f"Vectors {i}: {config["blobs"]["vectors"].get(str(i))}")
-                for i in range(len(config["blobs"]["centers"])):
-                    print(f"Centers {i}: {config["blobs"]["vectors"].get(str(i))}")
+                blobs: dict = config["blobs"]
+                origin_blobs = BLOBS(
+                    vectors=[blobs[i]["vector"] for i in blobs],
+                    centers=[blobs[i]["center"] for i in blobs],
+                )
+                self.origin_result = RESULT(blobs=origin_blobs)
 
             # Process image with new configuration
         except Exception as e:
@@ -597,7 +599,7 @@ class MainWindow(QMainWindow):
                 return
 
             config = self.settings.load_model(model_name)
-            if config and Settings.validate_config(config):
+            if config:
                 self.set_config(config)
                 self.statusBar().showMessage(
                     f"Model '{model_name}' loaded successfully", 5000
@@ -658,6 +660,33 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Error updating model list: {str(e)}")
 
+    def on_start_teaching(self):
+        self.start_loop_process()
+        self.ui.button_start_teaching.setEnabled(False)
+
+    def on_stop_teaching(self):
+        self.stop_loop_process()
+        self.ui.button_start_teaching.setEnabled(True)
+
+    def on_set_origin_teaching(self):
+        if self.current_image is None:
+            return
+
+        msg = QMessageBox.question(
+            self,
+            "Set Origin Image",
+            "Do you want to set origin image?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if msg == QMessageBox.StandardButton.No:
+            return
+
+        self.origin_result: RESULT = self.image_processor.find_result(
+            self.current_image, self.get_config(), b_origin=True
+        )
+
+        self.save_model_config()
+
     def start_loop_process(self):
         threading.Thread(target=self.thread_loop_process, daemon=True).start()
 
@@ -689,10 +718,11 @@ class MainWindow(QMainWindow):
 
                 if process_name == "ProcessAll":
                     # Find and draw contours
-                    result: RESULT = self.image_processor.find_result(mat, config)
+                    result: RESULT = self.image_processor.find_result(
+                        mat, config, b_origin=False
+                    )
 
-                    # print("Time Processing: ", time.time() - time_start)
-                    self.result = result
+                    print("Messager: ", result.msg)
                     return result
 
                 if process_name == "FindBlobs":

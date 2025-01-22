@@ -80,23 +80,3 @@ class Settings:
         except Exception as e:
             print(f"Error deleting model {model_name}: {str(e)}")
             return False
-
-    @staticmethod
-    def validate_config(config: Dict[str, Any]) -> bool:
-        """Validate configuration structure"""
-        try:
-            required_sections = [
-                "blur",
-                "threshold",
-                "morphological",
-                "contour",
-                "detection",
-            ]
-            for section in required_sections:
-                if section not in config:
-                    return False
-
-            # Add specific validation for each section if needed
-            return True
-        except Exception:
-            return False

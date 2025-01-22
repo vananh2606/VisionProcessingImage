@@ -4,10 +4,10 @@
         "ksize": 9
     },
     "threshold": {
-        "adaptive_type": "Gaussian",
+        "adaptive_type": "Mean",
         "thresh_type": "Binary",
-        "block_size": 125,
-        "c_index": 11
+        "block_size": 175,
+        "c_index": 5
     },
     "morphological": {
         "type": "Erode",
@@ -34,7 +34,7 @@
         }
     },
     "hough_circle": {
-        "type_blur_hough": "Gaussian Blur",
+        "type_blur_hough": "Median Blur",
         "ksize_hough": 9,
         "type_hough": "HOUGH_GRADIENT",
         "dp": 1.0,
@@ -45,48 +45,34 @@
         "max_radius": 30
     },
     "blobs": {
-        "vectors": {
-            "0": [
-                746,
-                3084
+        "0": {
+            "center": [
+                1730,
+                1747
             ],
-            "1": [
-                744,
-                2333
-            ],
-            "2": [
-                1470,
-                1578
-            ],
-            "3": [
-                3085,
-                936
-            ],
-            "4": [
-                3806,
-                815
+            "vector": [
+                1462,
+                1575
             ]
         },
-        "centers": {
-            "0": [
-                980,
-                3262
+        "1": {
+            "center": [
+                3253,
+                1739
             ],
-            "1": [
-                972,
-                2506
-            ],
-            "2": [
-                1721,
-                1742
-            ],
-            "3": [
-                3240,
+            "vector": [
+                2968,
+                1588
+            ]
+        },
+        "2": {
+            "center": [
+                3239,
                 977
             ],
-            "4": [
-                3895,
-                877
+            "vector": [
+                3087,
+                938
             ]
         }
     }

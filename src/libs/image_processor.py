@@ -4,8 +4,19 @@ from collections import namedtuple
 
 BLOBS = namedtuple(
     "blobs",
-    ["src", "dst", "mbin", "roi", "contours", "boxes", "circles", "vectors", "centers"],
-    defaults=[None, None, None, None, [], [], [], [], []],
+    [
+        "src",
+        "dst",
+        "mbin",
+        "roi",
+        "contours",
+        "boxes",
+        "circles",
+        "vectors",
+        "centers",
+        "aligments",
+    ],
+    defaults=[None, None, None, None, [], [], [], [], [], []],
 )
 
 RESULT = namedtuple(
@@ -221,8 +232,46 @@ class ImageProcessor:
         else:
             return BLOBS(src=cropped_image, dst=cropped_image)
 
+    def get_origin_from_config(config: dict):
+        return config["blobs"]
+
+    def cal_angle(vector: list):
+        x, y = vector
+        # Calculate angle using arctan2 (handles all quadrants correctly)
+        angle_rad = np.arctan2(y, x)
+        # Convert to degrees
+        angle_deg = np.degrees(angle_rad)
+
+        return angle_deg
+
+    def cal_aligment(origin: dict, current: dict) -> tuple[int, int, float]:
+        if current["center"] is None or current["vector"] is None:
+            return None
+
+        x0 = origin["center"][0]
+        y0 = origin["center"][1]
+        angle0 = ImageProcessor.cal_angle(origin["vector"])
+
+        x = current["center"][0]
+        y = current["center"][1]
+        angle = ImageProcessor.cal_angle(current["vector"])
+
+        dx = x - x0
+        dy = y - y0
+        da = angle - angle0
+
+        if da > 180:
+            da -= 360
+        elif da < -180:
+            da += 360
+
+        return dx, dy, da
+
     @staticmethod
-    def find_result(src, config: dict):
+    def find_result(src, config: dict, b_origin=False):
+        """
+        Find Blobs, Find Circles, Calculate aligment
+        """
         # find_blobs
         blobs: BLOBS = ImageProcessor.find_blobs(src, config)
 
@@ -241,6 +290,26 @@ class ImageProcessor:
                 vectors.append(None)
                 centers.append(None)
 
+        if b_origin:
+            aligments = None
+            msg = ""
+        else:
+            origins = ImageProcessor.get_origin_from_config(config)
+            currents = {
+                str(i): {
+                    "center": centers[i],
+                    "vector": vectors[i],
+                }
+                for i in range(len(centers))
+            }
+
+            aligments = {
+                key: ImageProcessor.cal_aligment(origins[key], currents[key])
+                for key in origins
+            }
+
+            msg = ImageProcessor.decision(aligments)
+
         blobs = BLOBS(
             mbin=blobs.mbin,
             contours=blobs.contours,
@@ -248,12 +317,13 @@ class ImageProcessor:
             circles=circles,
             vectors=vectors,
             centers=centers,
+            aligments=aligments,
         )
 
         dst = src.copy()
         dst = ImageProcessor.draw_output(dst, blobs)
 
-        return RESULT(src=src, dst=dst, mbin=blobs.mbin, blobs=blobs)
+        return RESULT(src=src, dst=dst, mbin=blobs.mbin, msg=msg, blobs=blobs)
 
     def draw_output(mat, blobs: BLOBS, color=(0, 255, 0), lw=5):
         boxes = blobs.boxes
@@ -270,9 +340,6 @@ class ImageProcessor:
                 cv.circle(mat, (c1[0], c1[1]), c1[2], color, lw)
                 cv.arrowedLine(mat, (c0[0], c0[1]), (c1[0], c1[1]), color, lw)
         return mat
-
-    def decision():
-        return True
 
     def cal_distance(pos_0, pos_1):
         x1, y1 = pos_0
@@ -314,3 +381,15 @@ class ImageProcessor:
                 circle_1 = circle
 
         return tuple(map(int, circle_0)), tuple(map(int, circle_1))
+
+    def decision(aligments: dict) -> str:
+        # if aligments is None:
+        #     return ""
+        msg = []
+        for aligment in aligments.values():
+            if aligment is None:
+                msg.append(f"None")
+            else:
+                dx, dy, da = aligment
+                msg.append(f"{dx},{dy},{da:.2f}")
+        return "_".join(msg)

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>787</width>
-    <height>586</height>
+    <height>604</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -200,7 +200,7 @@
            <number>10</number>
           </property>
           <item>
-           <layout class="QVBoxLayout" name="ConfigLayout" stretch="1,0,0,0,1,4">
+           <layout class="QVBoxLayout" name="ConfigLayout" stretch="1,0,0,0,0,1,0">
             <item>
              <layout class="QHBoxLayout" name="Model" stretch="1,2">
               <item>
@@ -242,9 +242,34 @@
              </widget>
             </item>
             <item>
+             <layout class="QHBoxLayout" name="LayoutTeaching">
+              <item>
+               <widget class="QPushButton" name="button_start_teaching">
+                <property name="text">
+                 <string>Start</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_stop_teaching">
+                <property name="text">
+                 <string>Stop</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="button_set_origin">
+                <property name="text">
+                 <string>Set Origin</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
              <widget class="QTabWidget" name="TabParameter">
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QWidget" name="DetectionRoi">
                <attribute name="title">
@@ -416,9 +441,9 @@
                <attribute name="title">
                 <string>Hough Circle</string>
                </attribute>
-               <layout class="QVBoxLayout" name="verticalLayout_4" stretch="2,6">
+               <layout class="QVBoxLayout" name="verticalLayout_4" stretch="1,1">
                 <item>
-                 <layout class="QGridLayout" name="gridLayout" rowstretch="0,3,3,0,0" columnstretch="0,0,0">
+                 <layout class="QGridLayout" name="gridLayout" rowstretch="0,3,3,0" columnstretch="0,0,0">
                   <item row="0" column="2">
                    <widget class="QLabel" name="label_ksize_hough">
                     <property name="text">
@@ -545,32 +570,32 @@
              </layout>
             </item>
             <item>
-             <layout class="QVBoxLayout" name="Button">
-              <item>
+             <layout class="QGridLayout" name="gridLayout_2">
+              <item row="1" column="0">
                <widget class="QPushButton" name="button_camera">
                 <property name="text">
                  <string>Open Camera</string>
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="1" column="1">
+               <widget class="QPushButton" name="button_open_folder">
+                <property name="text">
+                 <string>Open Folder</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
                <widget class="QPushButton" name="button_capture">
                 <property name="text">
                  <string>Capture</string>
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="2" column="1">
                <widget class="QPushButton" name="button_load_image">
                 <property name="text">
                  <string>Load Image</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_open_folder">
-                <property name="text">
-                 <string>Open Folder</string>
                 </property>
                </widget>
               </item>
