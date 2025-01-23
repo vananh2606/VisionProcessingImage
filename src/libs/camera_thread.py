@@ -12,7 +12,7 @@ class CameraThread(QThread):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.camera = Webcam(
+        self.camera = HIK(
             config={
                 "id": "0",
                 "feature": "",
@@ -39,7 +39,7 @@ class CameraThread(QThread):
                 else:
                     self.frameCaptured.emit(self.frame)
 
-                time.sleep(0.005)
+                time.sleep(0.04)
 
     def stop_camera(self):
         print("Stop Camera")

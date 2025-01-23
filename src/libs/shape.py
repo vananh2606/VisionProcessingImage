@@ -14,10 +14,10 @@ DEFAULT_SELECT_COLOR = QColor(255, 0, 0, 255)
 
 
 class Shape(object):
-    RADIUS = 5
-    THICKNESS = 2.5
-    FONT_SIZE = 10
-    MIN_WIDTH = 10
+    RADIUS = 7
+    THICKNESS = 7
+    FONT_SIZE = 30
+    MIN_WIDTH = 20
 
     def __init__(self, label=None):
         super(Shape, self).__init__()

@@ -194,8 +194,12 @@ class Ui_MainWindow(object):
         self.label_c_index = QtWidgets.QLabel(parent=self.DetectionRoi)
         self.label_c_index.setObjectName("label_c_index")
         self.Thresh.addWidget(self.label_c_index, 1, 3, 1, 1)
-        self.combo_box_type_adaptive_thresh = QtWidgets.QComboBox(parent=self.DetectionRoi)
-        self.combo_box_type_adaptive_thresh.setObjectName("combo_box_type_adaptive_thresh")
+        self.combo_box_type_adaptive_thresh = QtWidgets.QComboBox(
+            parent=self.DetectionRoi
+        )
+        self.combo_box_type_adaptive_thresh.setObjectName(
+            "combo_box_type_adaptive_thresh"
+        )
         self.Thresh.addWidget(self.combo_box_type_adaptive_thresh, 0, 0, 1, 3)
         self.ParameteDetection.addLayout(self.Thresh)
         self.TextMorph = QtWidgets.QHBoxLayout()
@@ -236,8 +240,12 @@ class Ui_MainWindow(object):
         self.combo_box_retrieval_modes = QtWidgets.QComboBox(parent=self.DetectionRoi)
         self.combo_box_retrieval_modes.setObjectName("combo_box_retrieval_modes")
         self.Contour.addWidget(self.combo_box_retrieval_modes)
-        self.combo_box_contour_approximation_modes = QtWidgets.QComboBox(parent=self.DetectionRoi)
-        self.combo_box_contour_approximation_modes.setObjectName("combo_box_contour_approximation_modes")
+        self.combo_box_contour_approximation_modes = QtWidgets.QComboBox(
+            parent=self.DetectionRoi
+        )
+        self.combo_box_contour_approximation_modes.setObjectName(
+            "combo_box_contour_approximation_modes"
+        )
         self.Contour.addWidget(self.combo_box_contour_approximation_modes)
         self.Contour.setStretch(0, 1)
         self.Contour.setStretch(1, 2)
@@ -352,6 +360,23 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setStretch(0, 1)
         self.verticalLayout_4.setStretch(1, 1)
         self.TabParameter.addTab(self.HoughCircle, "")
+        self.TrayInput = QtWidgets.QWidget()
+        self.TrayInput.setObjectName("TrayInput")
+        self.gridLayout_3 = QtWidgets.QGridLayout(self.TrayInput)
+        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.label_rows = QtWidgets.QLabel(parent=self.TrayInput)
+        self.label_rows.setObjectName("label_rows")
+        self.gridLayout_3.addWidget(self.label_rows, 0, 0, 1, 1)
+        self.line_rows = QtWidgets.QLineEdit(parent=self.TrayInput)
+        self.line_rows.setObjectName("line_rows")
+        self.gridLayout_3.addWidget(self.line_rows, 0, 1, 1, 1)
+        self.label_columns = QtWidgets.QLabel(parent=self.TrayInput)
+        self.label_columns.setObjectName("label_columns")
+        self.gridLayout_3.addWidget(self.label_colums, 1, 0, 1, 1)
+        self.line_columns = QtWidgets.QLineEdit(parent=self.TrayInput)
+        self.line_columns.setObjectName("line_columns")
+        self.gridLayout_3.addWidget(self.line_columns, 1, 1, 1, 1)
+        self.TabParameter.addTab(self.TrayInput, "")
         self.ConfigLayout.addWidget(self.TabParameter)
         self.ButtonModel = QtWidgets.QHBoxLayout()
         self.ButtonModel.setObjectName("ButtonModel")
@@ -439,7 +464,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.TabMachine.setCurrentIndex(1)
-        self.TabParameter.setCurrentIndex(1)
+        self.TabParameter.setCurrentIndex(0)
         self.TabScreen.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
@@ -457,12 +482,20 @@ class Ui_MainWindow(object):
         self.button_start.setText(_translate("MainWindow", "Start"))
         self.button_stop.setText(_translate("MainWindow", "Stop"))
         self.button_reset.setText(_translate("MainWindow", "Reset"))
-        self.TabMachine.setTabText(self.TabMachine.indexOf(self.TabAuto), _translate("MainWindow", "Auto"))
+        self.TabMachine.setTabText(
+            self.TabMachine.indexOf(self.TabAuto), _translate("MainWindow", "Auto")
+        )
         self.label_model.setText(_translate("MainWindow", "Model:"))
         self.label.setText(_translate("MainWindow", "Process Name"))
-        self.combo_box_process_name.setItemText(0, _translate("MainWindow", "ProcessAll"))
-        self.combo_box_process_name.setItemText(1, _translate("MainWindow", "FindCircles"))
-        self.combo_box_process_name.setItemText(2, _translate("MainWindow", "FindBlobs"))
+        self.combo_box_process_name.setItemText(
+            0, _translate("MainWindow", "ProcessAll")
+        )
+        self.combo_box_process_name.setItemText(
+            1, _translate("MainWindow", "FindCircles")
+        )
+        self.combo_box_process_name.setItemText(
+            2, _translate("MainWindow", "FindBlobs")
+        )
         self.button_start_teaching.setText(_translate("MainWindow", "Start"))
         self.button_stop_teaching.setText(_translate("MainWindow", "Stop"))
         self.button_set_origin.setText(_translate("MainWindow", "Set Origin"))
@@ -473,11 +506,16 @@ class Ui_MainWindow(object):
         self.label_type_morph.setText(_translate("MainWindow", "Type Morph"))
         self.label_kernel.setText(_translate("MainWindow", "Kernel"))
         self.label_type_retriecal.setText(_translate("MainWindow", "Retrieval "))
-        self.label_contour_approximation.setText(_translate("MainWindow", "Contour Approximation"))
+        self.label_contour_approximation.setText(
+            _translate("MainWindow", "Contour Approximation")
+        )
         self.label_area_min.setText(_translate("MainWindow", "Area Min"))
         self.label_area_max.setText(_translate("MainWindow", "Area Max"))
         self.label_distance.setText(_translate("MainWindow", "Distance"))
-        self.TabParameter.setTabText(self.TabParameter.indexOf(self.DetectionRoi), _translate("MainWindow", "Detection Roi"))
+        self.TabParameter.setTabText(
+            self.TabParameter.indexOf(self.DetectionRoi),
+            _translate("MainWindow", "Detection Roi"),
+        )
         self.label_ksize_hough.setText(_translate("MainWindow", "K-size"))
         self.label_type_blur_hough.setText(_translate("MainWindow", "Type Blur"))
         self.label_type_hough.setText(_translate("MainWindow", "Type Hough:"))
@@ -487,7 +525,16 @@ class Ui_MainWindow(object):
         self.label_param2.setText(_translate("MainWindow", "Param 2:"))
         self.label_min_radius.setText(_translate("MainWindow", "Min Radius"))
         self.label_max_radius.setText(_translate("MainWindow", "Max Radius:"))
-        self.TabParameter.setTabText(self.TabParameter.indexOf(self.HoughCircle), _translate("MainWindow", "Hough Circle"))
+        self.TabParameter.setTabText(
+            self.TabParameter.indexOf(self.HoughCircle),
+            _translate("MainWindow", "Hough Circle"),
+        )
+        self.label_rows.setText(_translate("MainWindow", "Rows:"))
+        self.label_colums.setText(_translate("MainWindow", "Columns:"))
+        self.TabParameter.setTabText(
+            self.TabParameter.indexOf(self.TrayInput),
+            _translate("MainWindow", "TrayInput"),
+        )
         self.button_add_model.setText(_translate("MainWindow", "Add Model"))
         self.button_delete_model.setText(_translate("MainWindow", "Delete Model"))
         self.button_save_model.setText(_translate("MainWindow", "Save Model"))
@@ -495,15 +542,23 @@ class Ui_MainWindow(object):
         self.button_open_folder.setText(_translate("MainWindow", "Open Folder"))
         self.button_capture.setText(_translate("MainWindow", "Capture"))
         self.button_load_image.setText(_translate("MainWindow", "Load Image"))
-        self.TabScreen.setTabText(self.TabScreen.indexOf(self.TabDST), _translate("MainWindow", "DST"))
-        self.TabScreen.setTabText(self.TabScreen.indexOf(self.TabMBIN), _translate("MainWindow", "MBIN"))
-        self.TabMachine.setTabText(self.TabMachine.indexOf(self.TabTeaching), _translate("MainWindow", "Teaching"))
+        self.TabScreen.setTabText(
+            self.TabScreen.indexOf(self.TabDST), _translate("MainWindow", "DST")
+        )
+        self.TabScreen.setTabText(
+            self.TabScreen.indexOf(self.TabMBIN), _translate("MainWindow", "MBIN")
+        )
+        self.TabMachine.setTabText(
+            self.TabMachine.indexOf(self.TabTeaching),
+            _translate("MainWindow", "Teaching"),
+        )
         self.menuFile.setTitle(_translate("MainWindow", "File"))
         self.menuAbout.setTitle(_translate("MainWindow", "About"))
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()

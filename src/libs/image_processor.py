@@ -121,24 +121,58 @@ class ImageProcessor:
         max_area = float(config["detection"]["area_max"])
         max_distance = config["detection"]["distance"]
 
-        contours = []
-        boxes = []
+        rows = config.get("rows", 4)
+        columns = config.get("columns", 5)
 
+        anchor_rois = []
+        # Lấy danh sách ROI từ config nếu có
+        shapes: dict = config["shapes"]
+        if shapes:
+            anchor_rois = [shapes[i]["box"] for i in shapes]
+
+        sorted_boxes = [None] * (
+            rows * columns
+        )  # List các boxes sau khi sorting dua vao anchor_rois
+
+        sorted_contours = [None] * (rows * columns)
+        # boxes = []
         dst = None
-        if b_debug:
-            dst = src.copy()
 
         for cnt in cnts:
             x, y, w, h = cv.boundingRect(cnt)
             area = w * h
             if min_area <= area <= max_area and abs(w - h) < max_distance:
-                contours.append(cnt)
-                boxes.append([x, y, w, h])
+                # Tính tâm của box
+                center_x = x + w // 2
+                center_y = y + h // 2
 
-                if b_debug:
-                    cv.rectangle(dst, (x, y), (x + w, y + h), (0, 255, 0), 5)
+                # Kiểm tra box thuộc ROI nào
+                for roi_index, roi in enumerate(anchor_rois):
+                    rx, ry, rw, rh = roi
+                    if (rx <= center_x <= rx + rw) and (ry <= center_y <= ry + rh):
+                        sorted_boxes[roi_index] = [x, y, w, h]
+                        sorted_contours[roi_index] = cnt
+                        break
 
-        return BLOBS(dst=dst, mbin=mbin, boxes=boxes, contours=contours)
+        if b_debug:
+            dst = src.copy()
+            for i, box in enumerate(sorted_boxes):
+                if box is None:
+                    continue
+                x, y, w, h = box
+                color = (0, 255, 0) if roi_index is None else (0, 0, 255)
+                cv.rectangle(dst, (x, y), (x + w, y + h), color, 5)
+                cv.putText(
+                    dst,
+                    f"BLOB: {i}",
+                    (x, y - 10),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    color,
+                    2,
+                )
+
+        return BLOBS(dst=dst, mbin=mbin, boxes=sorted_boxes, contours=sorted_contours)
 
     @staticmethod
     def find_circles(src, roi, config: dict, b_debug=False):
@@ -193,18 +227,20 @@ class ImageProcessor:
             maxRadius=max_radius,
         )
 
-        circles = [list(map(int, circle)) for circle in circles[0]]
-
         dst = None
-        vector = None
-
-        if b_debug:
-            dst = cropped_image.copy()
-            for circle in circles:
-                x0, y0, r0 = circle
-                cv.circle(dst, (x0, y0), r0, (0, 255, 0), 3)
 
         if circles is not None:
+            circles = [list(map(int, circle)) for circle in circles[0]]
+
+            vector = None
+            center = None
+
+            if b_debug:
+                dst = cropped_image.copy()
+                for circle in circles:
+                    x0, y0, r0 = circle
+                    cv.circle(dst, (x0, y0), r0, (0, 255, 0), 3)
+
             ret = ImageProcessor.filter_circle(cropped_image.shape[:2][::-1], circles)
 
             if ret:
@@ -216,10 +252,10 @@ class ImageProcessor:
                 if b_debug:
                     cv.arrowedLine(dst, (x0, y0), (x1, y1), (0, 255, 0), 3)
 
-            # map to global image
-            ret = [(x + roi[0], y + roi[1], r) for x, y, r in ret]
-            vector = (vector[0] + roi[0], vector[1] + roi[1])
-            center = (center[0] + roi[0], center[1] + roi[1])
+                # map to global image
+                ret = [(x + roi[0], y + roi[1], r) for x, y, r in ret]
+                vector = (vector[0] + roi[0], vector[1] + roi[1])
+                center = (center[0] + roi[0], center[1] + roi[1])
 
             return BLOBS(
                 src=cropped_image,
@@ -275,20 +311,19 @@ class ImageProcessor:
         # find_blobs
         blobs: BLOBS = ImageProcessor.find_blobs(src, config)
 
-        circles = []
-        vectors = []
-        centers = []
+        circles = [None] * len(blobs.boxes)
+        vectors = [None] * len(blobs.boxes)
+        centers = [None] * len(blobs.boxes)
 
-        for box in blobs.boxes:
+        for i, box in enumerate(blobs.boxes):
+            if box is None:
+                continue
             blob_circles: BLOBS = ImageProcessor.find_circles(src, box, config)
-            circles.append(blob_circles.circles)
+            circles[i] = blob_circles.circles
 
             if blob_circles.circles:
-                vectors.append(blob_circles.vectors[0])
-                centers.append(blob_circles.centers[0])
-            else:
-                vectors.append(None)
-                centers.append(None)
+                vectors[i] = blob_circles.vectors[0]
+                centers[i] = blob_circles.centers[0]
 
         if b_origin:
             aligments = None
@@ -325,20 +360,48 @@ class ImageProcessor:
 
         return RESULT(src=src, dst=dst, mbin=blobs.mbin, msg=msg, blobs=blobs)
 
-    def draw_output(mat, blobs: BLOBS, color=(0, 255, 0), lw=5):
+    def draw_output(mat, blobs: BLOBS, lw=5):
         boxes = blobs.boxes
         circles = blobs.circles
+        vectors = blobs.vectors
+        centers = blobs.centers
+        aligments = blobs.aligments
 
-        for box in boxes:
+        color_box, color_circles, color_aligments = (
+            (0, 255, 0),
+            (0, 0, 255),
+            (255, 0, 0),
+        )
+
+        for i, box in enumerate(boxes):
+            if box is None:
+                continue
             x, y, w, h = box
-            cv.rectangle(mat, (x, y), (x + w, y + h), color, lw)
+            cv.rectangle(mat, (x, y), (x + w, y + h), color_box, lw)
+            cv.putText(
+                mat, f"Boxes: {i}", (x, y), cv.FONT_HERSHEY_SIMPLEX, 3, color_box, lw
+            )
 
-        for pair_circles in circles:
+        for i, pair_circles in enumerate(circles):
             if pair_circles:
                 c0, c1 = pair_circles
-                cv.circle(mat, (c0[0], c0[1]), c0[2], color, lw)
-                cv.circle(mat, (c1[0], c1[1]), c1[2], color, lw)
-                cv.arrowedLine(mat, (c0[0], c0[1]), (c1[0], c1[1]), color, lw)
+                cv.circle(mat, (c0[0], c0[1]), c0[2], color_circles, lw)
+                cv.circle(mat, (c1[0], c1[1]), c1[2], color_circles, lw)
+                cv.arrowedLine(mat, (c0[0], c0[1]), (c1[0], c1[1]), color_circles, lw)
+
+                if aligments is not None:
+                    dx, dy, da = aligments[str(i)]
+                    cv.putText(
+                        mat,
+                        f"{dx},{dy},{da:.2f}",
+                        (c0[0], c0[1]),
+                        cv.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        color_aligments,
+                        2,
+                        cv.LINE_AA,
+                    )
+
         return mat
 
     def cal_distance(pos_0, pos_1):

@@ -44,6 +44,8 @@ class MainWindow(QMainWindow):
     showResultAutoSignal = pyqtSignal(RESULT)
     logInfoSignal = pyqtSignal(str)
 
+    messageboxWarningSignal = pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_MainWindow()
@@ -110,6 +112,10 @@ class MainWindow(QMainWindow):
         self.server.onTriggerSignal.connect(self.on_trigger)
         self.ui.button_start.clicked.connect(self.on_start_auto)
         self.ui.button_stop.clicked.connect(self.on_stop_auto)
+
+        self.messageboxWarningSignal.connect(
+            lambda msg: QMessageBox.warning(self, "WARNING", msg)
+        )
 
     """
     Logic Layout Auto
@@ -260,7 +266,7 @@ class MainWindow(QMainWindow):
         self.ui.combo_box_type_adaptive_thresh.addItems(self.adaptive_thresh_types)
         self.ui.combo_box_type_thresh.addItems(self.thresh_types)
 
-        self.ui.spin_box_block_size.setRange(3, 255)
+        self.ui.spin_box_block_size.setRange(0, 10000)
         self.ui.spin_box_block_size.setSingleStep(2)
         self.ui.spin_box_block_size.setValue(125)
 
@@ -312,12 +318,12 @@ class MainWindow(QMainWindow):
         self.ui.spin_box_dp.setRange(1, 3)
         self.ui.spin_box_dp.setValue(1)
 
-        self.ui.spin_box_min_dist.setRange(0, 100)
+        self.ui.spin_box_min_dist.setRange(0, 200)
         self.ui.spin_box_min_dist.setValue(8)
 
         self.ui.spin_box_param1.setRange(0, 255)
         self.ui.spin_box_param1.setValue(50)
-        self.ui.spin_box_param2.setRange(0, 200)
+        self.ui.spin_box_param2.setRange(0, 500)
         self.ui.spin_box_param2.setValue(20)
 
         self.ui.spin_box_min_radius.setValue(1)
@@ -329,6 +335,9 @@ class MainWindow(QMainWindow):
         # blobs: BLOBS =
         try:
             config = {
+                # TrapInput
+                "rows": int(self.ui.line_rows.text()),
+                "columns": int(self.ui.line_columns.text()),
                 # Blur parameters
                 "blur": {
                     "type": self.ui.combo_box_type_blur.currentText(),
@@ -385,14 +394,17 @@ class MainWindow(QMainWindow):
             }
             return config
         except Exception as e:
-            QMessageBox.critical(
-                None, "Error", f"Error getting configuration: {str(e)}"
-            )
+            msg = f"Error getting configuration: {str(e)}"
+            # self.messageboxWarningSignal.emit(msg)
+            print("Get Config: ", msg)
             return {}
 
     def set_config(self, config: dict):
         """Apply configuration to UI parameters"""
         try:
+            # Trap Input
+            self.ui.line_rows.setText(str(config.get("rows", 4)))
+            self.ui.line_columns.setText(str(config.get("columns", 4)))
             # Blur parameters
             if "blur" in config:
                 blur_index = self.ui.combo_box_type_blur.findText(
@@ -722,7 +734,10 @@ class MainWindow(QMainWindow):
                         mat, config, b_origin=False
                     )
 
-                    print("Messager: ", result.msg)
+                    msgs = result.msg.split("_")
+                    for i, msg in enumerate(msgs):
+                        print(f"BLOB_{i}: ", msg)
+
                     return result
 
                 if process_name == "FindBlobs":
@@ -792,7 +807,7 @@ class MainWindow(QMainWindow):
             self.is_camera_active = False
             # Clear the current image when stopping camera
             with self.processing_lock:
-                self.current_image = None
+                # self.current_image = None
                 # Clear the labels
                 self.canvasOutputImage.clear_pixmap()
                 self.canvasProcessingImage.clear_pixmap()
@@ -826,7 +841,7 @@ class MainWindow(QMainWindow):
         """Update the frame display and store current frame"""
         with self.processing_lock:
             if self.is_camera_active:
-                self.current_image = frame.copy()
+                self.current_image = frame
                 self.canvasOriginalImage.load_pixmap(ndarray2pixmap(frame))
 
     def capture_image(self):

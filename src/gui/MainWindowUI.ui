@@ -269,7 +269,7 @@
             <item>
              <widget class="QTabWidget" name="TabParameter">
               <property name="currentIndex">
-               <number>1</number>
+               <number>0</number>
               </property>
               <widget class="QWidget" name="DetectionRoi">
                <attribute name="title">
@@ -539,6 +539,33 @@
                    <widget class="QSpinBox" name="spin_box_max_radius"/>
                   </item>
                  </layout>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="TrayInput">
+               <attribute name="title">
+                <string>TrayInput</string>
+               </attribute>
+               <layout class="QGridLayout" name="gridLayout_3">
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_rows">
+                  <property name="text">
+                   <string>Rows:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QLineEdit" name="line_rows"/>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="label_colums">
+                  <property name="text">
+                   <string>Columns:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLineEdit" name="line_columns"/>
                 </item>
                </layout>
               </widget>
