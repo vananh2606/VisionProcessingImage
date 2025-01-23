@@ -254,7 +254,7 @@ class ImageProcessor:
 
                 # map to global image
                 ret = [(x + roi[0], y + roi[1], r) for x, y, r in ret]
-                vector = (vector[0] + roi[0], vector[1] + roi[1])
+                # vector = (vector[0] + roi[0], vector[1] + roi[1])
                 center = (center[0] + roi[0], center[1] + roi[1])
 
             return BLOBS(
@@ -282,6 +282,9 @@ class ImageProcessor:
 
     def cal_aligment(origin: dict, current: dict) -> tuple[int, int, float]:
         if current["center"] is None or current["vector"] is None:
+            return None
+
+        if origin["center"] is None or origin["vector"] is None:
             return None
 
         x0 = origin["center"][0]
@@ -390,10 +393,15 @@ class ImageProcessor:
                 cv.arrowedLine(mat, (c0[0], c0[1]), (c1[0], c1[1]), color_circles, lw)
 
                 if aligments is not None:
-                    dx, dy, da = aligments[str(i)]
+                    align = aligments[str(i)]
+                    if align is not None:
+                        dx, dy, da = align
+                        text = f"{dx},{dy},{da:.2f}"
+                    else:
+                        text = "None"
                     cv.putText(
                         mat,
-                        f"{dx},{dy},{da:.2f}",
+                        text,
                         (c0[0], c0[1]),
                         cv.FONT_HERSHEY_SIMPLEX,
                         1,

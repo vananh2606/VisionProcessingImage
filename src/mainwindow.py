@@ -40,7 +40,7 @@ STEP_RELEASE = "STEP_RELEASE"
 
 
 class MainWindow(QMainWindow):
-    showResultTechingSignal = pyqtSignal(object)
+    showResultTechingSignal = pyqtSignal()
     showResultAutoSignal = pyqtSignal(RESULT)
     logInfoSignal = pyqtSignal(str)
 
@@ -86,6 +86,7 @@ class MainWindow(QMainWindow):
         self.settings = Settings()
 
         self.origin_result: RESULT = RESULT()
+        self.teaching_result: RESULT = RESULT()
 
         self.update_model_list()
 
@@ -94,7 +95,8 @@ class MainWindow(QMainWindow):
         self.showResultTechingSignal.connect(self.show_result_teaching)
         self.showResultAutoSignal.connect(self.show_result_auto)
 
-        self.ui.button_camera.clicked.connect(self.toggle_camera)
+        self.ui.button_open_camera.clicked.connect(self.on_clicked_but_open_camera)
+        self.ui.button_camera.clicked.connect(self.on_clicked_button_start_camera)
         self.ui.button_capture.clicked.connect(self.capture_image)
         self.ui.button_load_image.clicked.connect(self.load_image)
         self.ui.button_open_folder.clicked.connect(self.open_folder)
@@ -140,8 +142,10 @@ class MainWindow(QMainWindow):
             self.start_server()
 
             # Khởi động camera thread mới
-            self.camera_thread = CameraThread()
-            self.camera_thread.open_camera()
+            if self.camera_thread is None or not self.camera_thread.b_open:
+                self.open_camera()
+
+            self.on_stop_teaching()
 
             threading.Thread(target=self.loop_auto, daemon=True).start()
 
@@ -155,8 +159,7 @@ class MainWindow(QMainWindow):
             self.b_stop_auto = True
 
             # Dừng camera
-            if self.camera_thread:
-                self.camera_thread.stop_camera()
+            self.close_camera()
 
             # Dừng server
             self.stop_server()
@@ -200,8 +203,13 @@ class MainWindow(QMainWindow):
                 pass
 
             elif step == STEP_OUTPUT:
-                self.server.send_message(self.current_socket, result.msg)
-                self.showResultAutoSignal.emit(result)
+                if result is not None:
+                    self.server.send_message(self.current_socket, result.msg)
+                    self.showResultAutoSignal.emit(result)
+                else:
+                    self.server.send_message(self.current_socket, "None")
+                    #
+
                 step = STEP_RELEASE
 
             elif step == STEP_RELEASE:
@@ -637,6 +645,21 @@ class MainWindow(QMainWindow):
             # Get current configuration
             config = self.get_config()
 
+            path = f"models/{model_name}/config.json"
+            if os.path.exists(path):
+                blobs_config = config["blobs"]
+
+                original_blobs_config: BLOBS = json.load(open(path, "r")).get(
+                    "blobs", None
+                )
+
+                for key, blobs in blobs_config.items():
+                    if original_blobs_config is not None:
+                        if blobs["center"] is None or blobs["vector"] is None:
+                            blobs_config[key] = original_blobs_config[key]
+
+                config["blobs"] = blobs_config
+
             # Confirm overwrite if model exists
             if model_name in self.settings.get_model_names():
                 reply = QMessageBox.question(
@@ -674,10 +697,15 @@ class MainWindow(QMainWindow):
 
     def on_start_teaching(self):
         self.start_loop_process()
+        # self.stop_camera()
+        self.ui.button_camera.setEnabled(False)
+        self.ui.button_open_camera.setEnabled(False)
         self.ui.button_start_teaching.setEnabled(False)
 
     def on_stop_teaching(self):
         self.stop_loop_process()
+        self.ui.button_camera.setEnabled(True)
+        self.ui.button_open_camera.setEnabled(True)
         self.ui.button_start_teaching.setEnabled(True)
 
     def on_set_origin_teaching(self):
@@ -709,14 +737,16 @@ class MainWindow(QMainWindow):
         self.b_stop = False
         while True:
             config = self.get_config()
-            ret: RESULT = self.process_image(mat=self.current_image, config=config)
-            if ret is not None:
-                self.showResultTechingSignal.emit(ret)
+            self.teaching_result: RESULT | BLOBS = self.process_image(
+                mat=self.current_image, config=config
+            )
+            if self.teaching_result is not None:
+                self.showResultTechingSignal.emit()
 
             if self.b_stop:
                 break
 
-            time.sleep(0.005)
+            time.sleep(0.5)
 
     def process_image(self, mat=None, config: dict = None):
         """Process image with thread safety"""
@@ -776,50 +806,69 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Error updating UI: {str(e)}")
 
-    def show_result_teaching(self, result: RESULT):
+    def show_result_teaching(self):
         try:
             # Convert and scale the original image
-            if result.dst is not None:
-                self.canvasOutputImage.load_pixmap(ndarray2pixmap(result.dst))
+            if self.teaching_result.dst is not None:
+                self.canvasOutputImage.load_pixmap(
+                    ndarray2pixmap(self.teaching_result.dst)
+                )
 
             # Convert and scale the processed image
-            if result.mbin is not None:
-                self.canvasProcessingImage.load_pixmap(ndarray2pixmap(result.mbin))
+            if self.teaching_result.mbin is not None:
+                self.canvasProcessingImage.load_pixmap(
+                    ndarray2pixmap(self.teaching_result.mbin)
+                )
+
+            self.teaching_result = None
 
         except Exception as e:
             print(f"Error updating UI: {str(e)}")
 
-    def toggle_camera(self):
-        """Toggle camera state between running and stopped"""
-        if not self.camera_thread or not self.camera_thread.isRunning():
-            self.start_camera()
-            self.ui.button_camera.setText("Stop Camera")
-            self.ui.button_load_image.setEnabled(False)
-            self.ui.button_open_folder.setEnabled(False)
+    def on_clicked_but_open_camera(self):
+        if self.ui.button_open_camera.text() == "Open Camera":
+            self.open_camera()
+        else:
+            self.close_camera()
+
+    def open_camera(self):
+        """Open camera and start processing"""
+        try:
+            self.camera_thread = CameraThread()
+            self.camera_thread.open_camera()
+            self.ui.button_camera.setEnabled(True)
             self.ui.button_capture.setEnabled(True)
-            self.is_camera_active = True
+            self.ui.button_open_camera.setText("Close Camera")
+        except Exception as e:
+            print(f"Error opening camera: {str(e)}")
+
+    def close_camera(self):
+        """Open camera and start processing"""
+        try:
+            self.camera_thread.close_camera()
+            self.ui.button_camera.setEnabled(False)
+            self.ui.button_open_camera.setText("Open Camera")
+            self.camera_thread = None
+        except Exception as e:
+            print(f"Error opening camera: {str(e)}")
+
+    def on_clicked_button_start_camera(self):
+        """Toggle camera state between running and stopped"""
+        if self.ui.button_camera.text() == "Start Camera":
+            self.start_camera()
         else:
             self.stop_camera()
-            self.ui.button_camera.setText("Start Camera")
-            self.ui.button_load_image.setEnabled(True)
-            self.ui.button_open_folder.setEnabled(True)
-            self.ui.button_capture.setEnabled(False)
-            self.is_camera_active = False
-            # Clear the current image when stopping camera
-            with self.processing_lock:
-                # self.current_image = None
-                # Clear the labels
-                self.canvasOutputImage.clear_pixmap()
-                self.canvasProcessingImage.clear_pixmap()
 
     def start_camera(self):
         """Start the camera and return success status"""
         try:
-            self.ui.list_widget_file.clear()
-            self.camera_thread = CameraThread()
             self.camera_thread.frameCaptured.connect(self.update_frame)
-            self.camera_thread.open_camera()
             self.camera_thread.start()
+
+            self.ui.button_camera.setText("Stop Camera")
+            self.ui.button_load_image.setEnabled(False)
+            self.ui.button_open_folder.setEnabled(False)
+            self.is_camera_active = True
 
         except Exception as e:
             QMessageBox.critical(
@@ -832,6 +881,18 @@ class MainWindow(QMainWindow):
             if self.camera_thread and self.camera_thread.isRunning():
                 self.camera_thread.stop_camera()
                 self.camera_thread.frameCaptured.disconnect()
+
+                self.ui.button_camera.setText("Start Camera")
+                self.ui.button_load_image.setEnabled(True)
+                self.ui.button_open_folder.setEnabled(True)
+                self.is_camera_active = False
+                # Clear the current image when stopping camera
+                with self.processing_lock:
+                    # self.current_image = None
+                    # Clear the labels
+                    self.canvasOutputImage.clear_pixmap()
+                    self.canvasProcessingImage.clear_pixmap()
+
         except Exception as e:
             QMessageBox.critical(
                 self, "Camera Error", f"Failed to stop camera: {str(e)}"
@@ -847,7 +908,8 @@ class MainWindow(QMainWindow):
     def capture_image(self):
         """Capture current frame or loaded image"""
         try:
-            if self.camera_thread.frame is None:
+            mat = self.camera_thread.grab_camera()
+            if mat is None:
                 QMessageBox.warning(
                     self,
                     "Warning",
@@ -855,24 +917,30 @@ class MainWindow(QMainWindow):
                 )
                 return
 
+            self.current_image = mat
+            pixmap = ndarray2pixmap(self.current_image)
+            self.canvasOriginalImage.load_pixmap(pixmap, True)
+
             # Create default filename with timestamp
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            default_filename = f"captured_image_{timestamp}.jpg"
+            # timestamp = time.strftime("%Y%m%d-%H%M%S")
+            # default_filename = f"captured_image_{timestamp}.jpg"
 
-            # Open save file dialog
-            file_dialog = QFileDialog()
-            file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
-            file_dialog.setNameFilter("Images (*.jpg *.png *.bmp)")
-            file_dialog.setDefaultSuffix("jpg")
-            file_dialog.selectFile(default_filename)
+            # # Open save file dialog
+            # file_dialog = QFileDialog()
+            # file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+            # file_dialog.setNameFilter("Images (*.jpg *.png *.bmp)")
+            # file_dialog.setDefaultSuffix("jpg")
+            # file_dialog.selectFile(default_filename)
 
-            if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
-                filename = file_dialog.selectedFiles()[0]
-                # Save the image
-                cv.imwrite(filename, self.camera_thread.frame)
-                QMessageBox.information(
-                    self, "Success", f"Image saved successfully to:\n{filename}"
-                )
+            # if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
+            #     filename = file_dialog.selectedFiles()[0]
+            #     # Save the image
+            #     cv.imwrite(filename, self.current_image)
+            #     pixmap = ndarray2pixmap(self.current_image)
+            #     self.canvasOriginalImage.load_pixmap(pixmap, True)
+            #     QMessageBox.information(
+            #         self, "Success", f"Image saved successfully to:\n{filename}"
+            #     )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to capture image: {str(e)}")
 
@@ -952,6 +1020,6 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         """Clean up threads before closing"""
         self.stop_loop_process()
-        if self.camera_thread and self.camera_thread.isRunning():
-            self.stop_camera()
+        if self.camera_thread:
+            self.close_camera()
         return super().closeEvent(event)

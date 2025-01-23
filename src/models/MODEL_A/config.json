@@ -26,30 +26,30 @@
     },
     "shapes": {
         "0": {
-            "label": "Roi1",
+            "label": "Roi3",
             "box": [
-                327,
+                380,
                 0,
-                759,
-                748
+                758,
+                746
             ]
         },
         "1": {
-            "label": "Roi2",
+            "label": "Roi1",
             "box": [
-                1264,
-                0,
+                1300,
+                10,
                 766,
-                702
+                701
             ]
         },
         "2": {
-            "label": "Roi3",
+            "label": "Roi2",
             "box": [
-                2186,
-                23,
+                2220,
+                37,
                 782,
-                683
+                682
             ]
         },
         "3": {
@@ -172,8 +172,8 @@
         "16": {
             "label": "Roi17",
             "box": [
-                1252,
-                2770,
+                4103,
+                2721,
                 795,
                 776
             ]
@@ -199,8 +199,8 @@
         "19": {
             "label": "Roi20",
             "box": [
-                4064,
-                2727,
+                1258,
+                2812,
                 791,
                 704
             ]
@@ -220,117 +220,69 @@
     "blobs": {
         "0": {
             "center": [
-                691,
-                328
+                944,
+                375
             ],
             "vector": [
-                607,
-                88
+                130,
+                -1
             ]
         },
         "1": {
             "center": [
-                1642,
-                319
+                1870,
+                409
             ],
             "vector": [
-                1540,
-                110
+                108,
+                66
             ]
         },
         "2": {
-            "center": [
-                2579,
-                328
-            ],
-            "vector": [
-                2218,
-                113
-            ]
+            "center": null,
+            "vector": null
         },
         "3": {
-            "center": [
-                3513,
-                321
-            ],
-            "vector": [
-                3149,
-                89
-            ]
+            "center": null,
+            "vector": null
         },
         "4": {
-            "center": [
-                4443,
-                322
-            ],
-            "vector": [
-                4309,
-                140
-            ]
+            "center": null,
+            "vector": null
         },
         "5": {
             "center": [
-                684,
-                1268
+                836,
+                1306
             ],
             "vector": [
-                609,
-                1018
+                128,
+                20
             ]
         },
         "6": {
-            "center": [
-                1628,
-                1260
-            ],
-            "vector": [
-                1530,
-                1063
-            ]
+            "center": null,
+            "vector": null
         },
         "7": {
             "center": null,
             "vector": null
         },
         "8": {
-            "center": [
-                3524,
-                1255
-            ],
-            "vector": [
-                3156,
-                1030
-            ]
+            "center": null,
+            "vector": null
         },
         "9": {
-            "center": [
-                4461,
-                1251
-            ],
-            "vector": [
-                4322,
-                1038
-            ]
+            "center": null,
+            "vector": null
         },
         "10": {
-            "center": [
-                684,
-                2221
-            ],
-            "vector": [
-                396,
-                2058
-            ]
+            "center": null,
+            "vector": null
         },
         "11": {
-            "center": [
-                1635,
-                2211
-            ],
-            "vector": [
-                1536,
-                1972
-            ]
+            "center": null,
+            "vector": null
         },
         "12": {
             "center": null,
@@ -338,73 +290,43 @@
         },
         "13": {
             "center": [
-                3535,
-                2202
+                3688,
+                2190
             ],
             "vector": [
-                3164,
-                1955
+                76,
+                89
             ]
         },
         "14": {
-            "center": [
-                4475,
-                2187
-            ],
-            "vector": [
-                4096,
-                1933
-            ]
+            "center": null,
+            "vector": null
         },
         "15": {
-            "center": [
-                706,
-                3166
-            ],
-            "vector": [
-                379,
-                2946
-            ]
+            "center": null,
+            "vector": null
         },
         "16": {
             "center": [
-                1650,
-                3158
+                4567,
+                3202
             ],
             "vector": [
-                1439,
-                2785
+                -100,
+                -82
             ]
         },
         "17": {
-            "center": [
-                2589,
-                3153
-            ],
-            "vector": [
-                2475,
-                2906
-            ]
+            "center": null,
+            "vector": null
         },
         "18": {
-            "center": [
-                3539,
-                3141
-            ],
-            "vector": [
-                3169,
-                2906
-            ]
+            "center": null,
+            "vector": null
         },
         "19": {
-            "center": [
-                4476,
-                3126
-            ],
-            "vector": [
-                4340,
-                2882
-            ]
+            "center": null,
+            "vector": null
         }
     }
 }

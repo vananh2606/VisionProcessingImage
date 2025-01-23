@@ -27,6 +27,13 @@ class CameraThread(QThread):
         self.b_open = self.camera.open()
         self.b_open &= self.camera.start_grabbing()
 
+    def grab_camera(self):
+        if self.b_open:
+            err, self.frame = self.camera.grab()
+            return self.frame
+        else:
+            return None
+
     def run(self):
         if self.b_open:
             self.running = True
@@ -44,5 +51,8 @@ class CameraThread(QThread):
     def stop_camera(self):
         print("Stop Camera")
         self.running = False
+
+    def close_camera(self):
+        self.stop_camera()
         self.camera.stop_grabbing()
         self.camera.close()
