@@ -205,25 +205,32 @@ class MainWindow(QMainWindow):
                 if result is not None:
                     self.server.send_message(self.current_socket, result.msg)
                     self.showResultAutoSignal.emit(result)
+
                     c_true = 0
                     c_false = 0
+                    c_none = 0
+
+                    print(f"Decision: {result.decision}")
+
                     for decision in result.decision:
                         if decision == True:
                             c_true += 1
-                        else:
+                        elif decision == False:
                             c_false += 1
+                        else:
+                            c_none += 1
 
                     if c_true == c_true + c_false:
                         self.ui.label_checked.setText("Pass")
                     else:
                         self.ui.label_checked.setText("Fail")
 
+                    n_total = c_false + c_true
+
                     self.ui.label_ok.setText(f"N-OK: {c_true}")
                     self.ui.label_ng.setText(f"N-NG: {c_false}")
-                    self.ui.label_total.setText(f"N-Total: {c_false + c_true}")
-                    self.ui.label_rate.setText(
-                        f"Rate: {(c_true / (c_true + c_false)) * 100 }%"
-                    )
+                    self.ui.label_total.setText(f"N-Total: {n_total}")
+                    self.ui.label_rate.setText(f"Rate: {(c_true / (n_total)) * 100 }%")
                 else:
                     self.server.send_message(self.current_socket, "None")
 
