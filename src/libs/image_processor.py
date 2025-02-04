@@ -21,8 +21,8 @@ BLOBS = namedtuple(
 
 RESULT = namedtuple(
     "result",
-    ["src", "dst", "mbin", "ret", "msg", "blobs"],
-    defaults=[None, None, None, True, "", BLOBS()],
+    ["src", "dst", "mbin", "ret", "msg", "decision", "blobs"],
+    defaults=[None, None, None, True, "", [], BLOBS()],
 )
 
 
@@ -331,6 +331,7 @@ class ImageProcessor:
         if b_origin:
             aligments = None
             msg = ""
+            decision = []
         else:
             origins = ImageProcessor.get_origin_from_config(config)
             currents = {
@@ -346,7 +347,7 @@ class ImageProcessor:
                 for key in origins
             }
 
-            msg = ImageProcessor.decision(aligments)
+            msg, decision = ImageProcessor.decision(aligments)
 
         blobs = BLOBS(
             mbin=blobs.mbin,
@@ -361,7 +362,9 @@ class ImageProcessor:
         dst = src.copy()
         dst = ImageProcessor.draw_output(dst, blobs)
 
-        return RESULT(src=src, dst=dst, mbin=blobs.mbin, msg=msg, blobs=blobs)
+        return RESULT(
+            src=src, dst=dst, mbin=blobs.mbin, msg=msg, decision=decision, blobs=blobs
+        )
 
     def draw_output(mat, blobs: BLOBS, lw=5):
         boxes = blobs.boxes
@@ -404,9 +407,9 @@ class ImageProcessor:
                         text,
                         (c0[0], c0[1]),
                         cv.FONT_HERSHEY_SIMPLEX,
-                        1,
-                        color_aligments,
                         2,
+                        color_aligments,
+                        3,
                         cv.LINE_AA,
                     )
 
@@ -453,14 +456,20 @@ class ImageProcessor:
 
         return tuple(map(int, circle_0)), tuple(map(int, circle_1))
 
-    def decision(aligments: dict) -> str:
+    def decision(aligments: dict) -> tuple:
         # if aligments is None:
         #     return ""
         msg = []
+        decision = []
         for aligment in aligments.values():
             if aligment is None:
                 msg.append(f"None")
+                decision.append(None)
             else:
                 dx, dy, da = aligment
                 msg.append(f"{dx},{dy},{da:.2f}")
-        return "_".join(msg)
+                if -10 < abs(dx) < 10 and -10 < abs(dy) < 10 and -5 < abs(da) < 5:
+                    decision.append(True)
+                else:
+                    decision.append(False)
+        return "_".join(msg), decision

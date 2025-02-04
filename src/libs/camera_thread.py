@@ -8,7 +8,7 @@ from cameras.base_camera import NO_ERROR
 
 
 class CameraThread(QThread):
-    frameCaptured = pyqtSignal(object)
+    frameCaptured = pyqtSignal(object, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -44,7 +44,7 @@ class CameraThread(QThread):
                     print("Camera error: ", err)
                     break
                 else:
-                    self.frameCaptured.emit(self.frame)
+                    self.frameCaptured.emit(self.frame, time.time())
 
                 time.sleep(0.04)
 

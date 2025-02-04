@@ -52,7 +52,6 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
 
         self.is_camera_active = False
-        self.processing_lock = threading.Lock()
 
         self.server = Server()
         self.server_thread = None
@@ -206,9 +205,27 @@ class MainWindow(QMainWindow):
                 if result is not None:
                     self.server.send_message(self.current_socket, result.msg)
                     self.showResultAutoSignal.emit(result)
+                    c_true = 0
+                    c_false = 0
+                    for decision in result.decision:
+                        if decision == True:
+                            c_true += 1
+                        else:
+                            c_false += 1
+
+                    if c_true == c_true + c_false:
+                        self.ui.label_checked.setText("Pass")
+                    else:
+                        self.ui.label_checked.setText("Fail")
+
+                    self.ui.label_ok.setText(f"N-OK: {c_true}")
+                    self.ui.label_ng.setText(f"N-NG: {c_false}")
+                    self.ui.label_total.setText(f"N-Total: {c_false + c_true}")
+                    self.ui.label_rate.setText(
+                        f"Rate: {(c_true / (c_true + c_false)) * 100 }%"
+                    )
                 else:
                     self.server.send_message(self.current_socket, "None")
-                    #
 
                 step = STEP_RELEASE
 
@@ -219,7 +236,7 @@ class MainWindow(QMainWindow):
                 result = None
                 step = STEP_WAIT_TRIGGER
 
-            time.sleep(0.005)
+            time.sleep(0.05)
 
             if self.b_stop_auto:
                 break
@@ -746,7 +763,7 @@ class MainWindow(QMainWindow):
             if self.b_stop:
                 break
 
-            time.sleep(0.5)
+            time.sleep(0.25)
 
     def process_image(self, mat=None, config: dict = None):
         """Process image with thread safety"""
@@ -754,48 +771,47 @@ class MainWindow(QMainWindow):
         if mat is None or config is None:
             return None
 
-        with self.processing_lock:
-            try:
-                process_name = self.ui.combo_box_process_name.currentText()
+        try:
+            process_name = self.ui.combo_box_process_name.currentText()
 
-                if process_name == "ProcessAll":
-                    # Find and draw contours
-                    result: RESULT = self.image_processor.find_result(
-                        mat, config, b_origin=False
+            if process_name == "ProcessAll":
+                # Find and draw contours
+                result: RESULT = self.image_processor.find_result(
+                    mat, config, b_origin=False
+                )
+
+                msgs = result.msg.split("_")
+                for i, msg in enumerate(msgs):
+                    print(f"BLOB_{i}: ", msg)
+
+                return result
+
+            if process_name == "FindBlobs":
+                # Find and draw contours
+                result: BLOBS = self.image_processor.find_blobs(
+                    mat, config, b_debug=True
+                )
+
+                # print("Time Processing: ", time.time() - time_start)
+                return result
+
+            if process_name == "FindCircles":
+                # Find and draw contours
+                index = self.canvasOriginalImage.idSelected
+                if index is not None:
+                    current_shape: Shape = self.canvasOriginalImage[index]
+                    roi = current_shape.cvBox
+
+                    result: BLOBS = self.image_processor.find_circles(
+                        mat, roi, config, b_debug=True
                     )
 
-                    msgs = result.msg.split("_")
-                    for i, msg in enumerate(msgs):
-                        print(f"BLOB_{i}: ", msg)
+                # print("Time Processing: ", time.time() - time_start)
+                return result
 
-                    return result
-
-                if process_name == "FindBlobs":
-                    # Find and draw contours
-                    result: BLOBS = self.image_processor.find_blobs(
-                        mat, config, b_debug=True
-                    )
-
-                    # print("Time Processing: ", time.time() - time_start)
-                    return result
-
-                if process_name == "FindCircles":
-                    # Find and draw contours
-                    index = self.canvasOriginalImage.idSelected
-                    if index is not None:
-                        current_shape: Shape = self.canvasOriginalImage[index]
-                        roi = current_shape.cvBox
-
-                        result: BLOBS = self.image_processor.find_circles(
-                            mat, roi, config, b_debug=True
-                        )
-
-                    # print("Time Processing: ", time.time() - time_start)
-                    return result
-
-            except Exception as e:
-                print(f"[{time.strftime('%H:%M:%S')}][process_image][ERROR]: {str(e)}")
-                return None
+        except Exception as e:
+            print(f"[{time.strftime('%H:%M:%S')}][process_image][ERROR]: {str(e)}")
+            return None
 
     def show_result_auto(self, result: RESULT):
         try:
@@ -811,13 +827,13 @@ class MainWindow(QMainWindow):
             # Convert and scale the original image
             if self.teaching_result.dst is not None:
                 self.canvasOutputImage.load_pixmap(
-                    ndarray2pixmap(self.teaching_result.dst)
+                    ndarray2pixmap(cv.resize(self.teaching_result.dst, (1280, 960)))
                 )
 
             # Convert and scale the processed image
             if self.teaching_result.mbin is not None:
                 self.canvasProcessingImage.load_pixmap(
-                    ndarray2pixmap(self.teaching_result.mbin)
+                    ndarray2pixmap(cv.resize(self.teaching_result.mbin, (1280, 960)))
                 )
 
             self.teaching_result = None
@@ -887,23 +903,24 @@ class MainWindow(QMainWindow):
                 self.ui.button_open_folder.setEnabled(True)
                 self.is_camera_active = False
                 # Clear the current image when stopping camera
-                with self.processing_lock:
-                    # self.current_image = None
-                    # Clear the labels
-                    self.canvasOutputImage.clear_pixmap()
-                    self.canvasProcessingImage.clear_pixmap()
+
+                # self.current_image = None
+                # Clear the labels
+                self.canvasOutputImage.clear_pixmap()
+                self.canvasProcessingImage.clear_pixmap()
 
         except Exception as e:
             QMessageBox.critical(
                 self, "Camera Error", f"Failed to stop camera: {str(e)}"
             )
 
-    def update_frame(self, frame):
+    def update_frame(self, frame, t_start):
         """Update the frame display and store current frame"""
-        with self.processing_lock:
-            if self.is_camera_active:
-                self.current_image = frame
-                self.canvasOriginalImage.load_pixmap(ndarray2pixmap(frame))
+        # dt = time.time() - t_start
+        # print(dt)
+        if self.is_camera_active:
+            self.current_image = frame
+            self.canvasOriginalImage.load_pixmap(ndarray2pixmap(frame))
 
     def capture_image(self):
         """Capture current frame or loaded image"""
@@ -960,19 +977,18 @@ class MainWindow(QMainWindow):
             if file_dialog.exec() == QFileDialog.DialogCode.Accepted:
                 file_path = file_dialog.selectedFiles()[0]
 
-                with self.processing_lock:
-                    self.current_image = cv.imread(file_path)
-                    if self.current_image is None:
-                        QMessageBox.critical(
-                            self,
-                            "Error",
-                            "Failed to load image. Please try another file.",
-                        )
-                        return
-                    # Update the original image display
-                    self.canvasOriginalImage.load_pixmap(
-                        ndarray2pixmap(self.current_image), True
+                self.current_image = cv.imread(file_path)
+                if self.current_image is None:
+                    QMessageBox.critical(
+                        self,
+                        "Error",
+                        "Failed to load image. Please try another file.",
                     )
+                    return
+                # Update the original image display
+                self.canvasOriginalImage.load_pixmap(
+                    ndarray2pixmap(self.current_image), True
+                )
 
         except Exception as e:
             QMessageBox.critical(
@@ -1003,19 +1019,18 @@ class MainWindow(QMainWindow):
             item = selected_items[0]
             index = self.ui.list_widget_file.row(item)
             file_path = self.file_paths[index]
-            with self.processing_lock:
-                self.current_image = cv.imread(file_path)
-                if self.current_image is None:
-                    QMessageBox.critical(
-                        self,
-                        "Error",
-                        "Failed to load image. Please try another file.",
-                    )
-                    return
-                # Update the original image display
-                self.canvasOriginalImage.load_pixmap(
-                    ndarray2pixmap(self.current_image), True
+            self.current_image = cv.imread(file_path)
+            if self.current_image is None:
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    "Failed to load image. Please try another file.",
                 )
+                return
+            # Update the original image display
+            self.canvasOriginalImage.load_pixmap(
+                ndarray2pixmap(self.current_image), True
+            )
 
     def closeEvent(self, event):
         """Clean up threads before closing"""
