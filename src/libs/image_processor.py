@@ -74,9 +74,9 @@ class ImageProcessor:
 
         morph_type = config["morphological"]["type"]
         if morph_type == "Erode":
-            return cv.erode(image, kernel, iterations=5)
+            return cv.erode(image, kernel)
         elif morph_type == "Dilate":
-            return cv.dilate(image, kernel, iterations=5)
+            return cv.dilate(image, kernel)
         elif morph_type == "Open":
             return cv.morphologyEx(image, cv.MORPH_OPEN, kernel)
         else:  # Close
@@ -360,32 +360,48 @@ class ImageProcessor:
         )
 
         dst = src.copy()
-        dst = ImageProcessor.draw_output(dst, blobs)
+        dst = ImageProcessor.draw_output(dst, blobs, config)
 
         return RESULT(
             src=src, dst=dst, mbin=blobs.mbin, msg=msg, decision=decision, blobs=blobs
         )
 
-    def draw_output(mat, blobs: BLOBS, lw=5):
+    def draw_output(mat, blobs: BLOBS, config: dict, lw=5):
         boxes = blobs.boxes
         circles = blobs.circles
         vectors = blobs.vectors
         centers = blobs.centers
         aligments = blobs.aligments
+        origins: dict = config
 
         color_box, color_circles, color_aligments = (
-            (0, 255, 0),
+            (0, 0, 0),
             (0, 0, 255),
             (255, 0, 0),
         )
 
         for i, box in enumerate(boxes):
             if box is None:
-                continue
-            x, y, w, h = box
+                print(origins)
+                box_origins = origins["shapes"][i]["box"]
+                x, y, w, h = box_origins
+                text_box = f"Boxes{i}: NG"
+                color_box = (0, 0, 255)
+
+            else:
+                x, y, w, h = box
+                text_box = f"Boxes{i}: OK"
+                color_box = (0, 255, 0)
+
             cv.rectangle(mat, (x, y), (x + w, y + h), color_box, lw)
             cv.putText(
-                mat, f"Boxes: {i}", (x, y), cv.FONT_HERSHEY_SIMPLEX, 3, color_box, lw
+                mat,
+                text_box,
+                (x, y),
+                cv.FONT_HERSHEY_SIMPLEX,
+                3,
+                color_box,
+                lw,
             )
 
         for i, pair_circles in enumerate(circles):
@@ -402,6 +418,7 @@ class ImageProcessor:
                         text = f"{dx},{dy},{da:.2f}"
                     else:
                         text = "None"
+
                     cv.putText(
                         mat,
                         text,

@@ -222,14 +222,16 @@ class MainWindow(QMainWindow):
 
                     if c_true == c_true + c_false:
                         self.ui.label_checked.setText("Pass")
+                        self.ui.label_checked.setStyleSheet("background-color: green")
                     else:
                         self.ui.label_checked.setText("Fail")
+                        self.ui.label_checked.setStyleSheet("background-color: red")
 
                     n_total = c_false + c_true
 
-                    self.ui.label_ok.setText(f"N-OK: {c_true}")
-                    self.ui.label_ng.setText(f"N-NG: {c_false}")
-                    self.ui.label_total.setText(f"N-Total: {n_total}")
+                    self.ui.label_ok.setText(f"Aligment-OK: {c_true}")
+                    self.ui.label_ng.setText(f"Aligment-NG: {c_false}")
+                    self.ui.label_total.setText(f"Aligments: {n_total}")
                     self.ui.label_rate.setText(f"Rate: {(c_true / (n_total)) * 100 }%")
                 else:
                     self.server.send_message(self.current_socket, "None")
@@ -722,14 +724,10 @@ class MainWindow(QMainWindow):
     def on_start_teaching(self):
         self.start_loop_process()
         # self.stop_camera()
-        self.ui.button_camera.setEnabled(False)
-        self.ui.button_open_camera.setEnabled(False)
         self.ui.button_start_teaching.setEnabled(False)
 
     def on_stop_teaching(self):
         self.stop_loop_process()
-        self.ui.button_camera.setEnabled(True)
-        self.ui.button_open_camera.setEnabled(True)
         self.ui.button_start_teaching.setEnabled(True)
 
     def on_set_origin_teaching(self):
@@ -889,6 +887,7 @@ class MainWindow(QMainWindow):
             self.camera_thread.start()
 
             self.ui.button_camera.setText("Stop Camera")
+            self.ui.button_open_camera.setEnabled(False)
             self.ui.button_load_image.setEnabled(False)
             self.ui.button_open_folder.setEnabled(False)
             self.is_camera_active = True
@@ -906,6 +905,7 @@ class MainWindow(QMainWindow):
                 self.camera_thread.frameCaptured.disconnect()
 
                 self.ui.button_camera.setText("Start Camera")
+                self.ui.button_open_camera.setEnabled(True)
                 self.ui.button_load_image.setEnabled(True)
                 self.ui.button_open_folder.setEnabled(True)
                 self.is_camera_active = False
