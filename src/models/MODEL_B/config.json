@@ -1,4 +1,6 @@
 {
+    "rows": 4,
+    "columns": 4,
     "blur": {
         "type": "Median Blur",
         "ksize": 9
