@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>787</width>
-    <height>604</height>
+    <height>631</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -231,12 +231,22 @@
               </item>
               <item>
                <property name="text">
-                <string>FindCircles</string>
+                <string>ProcessAllwithYOLO</string>
                </property>
               </item>
               <item>
                <property name="text">
                 <string>FindBlobs</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>FindBlobswithYOLO</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>FindCircles</string>
                </property>
               </item>
              </widget>
@@ -269,7 +279,7 @@
             <item>
              <widget class="QTabWidget" name="TabParameter">
               <property name="currentIndex">
-               <number>0</number>
+               <number>2</number>
               </property>
               <widget class="QWidget" name="DetectionRoi">
                <attribute name="title">

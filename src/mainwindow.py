@@ -13,6 +13,7 @@ from PyQt6.QtCore import QStringListModel, QPointF, QDir, pyqtSignal
 
 import cv2 as cv
 import numpy as np
+from ultralytics import YOLO
 import json
 import threading
 import socket
@@ -210,7 +211,7 @@ class MainWindow(QMainWindow):
                     c_false = 0
                     c_none = 0
 
-                    print(f"Decision: {result.decision}")
+                    # print(f"Decision: {result.decision}")
 
                     for decision in result.decision:
                         if decision == True:
@@ -757,10 +758,13 @@ class MainWindow(QMainWindow):
 
     def thread_loop_process(self):
         self.b_stop = False
+
+        model = self.load_model_yolo("resource/models/detect_watch_20250210.pt")
+
         while True:
             config = self.get_config()
             self.teaching_result: RESULT | BLOBS = self.process_image(
-                mat=self.current_image, config=config
+                mat=self.current_image, model=model, config=config
             )
             if self.teaching_result is not None:
                 self.showResultTechingSignal.emit()
@@ -768,9 +772,20 @@ class MainWindow(QMainWindow):
             if self.b_stop:
                 break
 
-            time.sleep(0.25)
+            time.sleep(0.5)
 
-    def process_image(self, mat=None, config: dict = None):
+    def load_model_yolo(self, model_path):
+        # Load YOLO model
+        # model = YOLO("resource/models/detect_watch_20250210.pt")
+        model = YOLO(model_path)
+
+        mat = np.zeros((640, 640, 3), dtype=np.uint8)
+
+        model(mat)
+
+        return model
+
+    def process_image(self, mat=None, model: YOLO = None, config: dict = None):
         """Process image with thread safety"""
         time_start = time.time()
         if mat is None or config is None:
@@ -782,12 +797,24 @@ class MainWindow(QMainWindow):
             if process_name == "ProcessAll":
                 # Find and draw contours
                 result: RESULT = self.image_processor.find_result(
-                    mat, config, b_origin=False
+                    mat, config, model=None, b_origin=False
                 )
 
-                msgs = result.msg.split("_")
-                for i, msg in enumerate(msgs):
-                    print(f"BLOB_{i}: ", msg)
+                # msgs = result.msg.split("_")
+                # for i, msg in enumerate(msgs):
+                #     print(f"BLOB_{i}: ", msg)
+
+                return result
+
+            if process_name == "ProcessAllwithYOLO":
+                # Find and draw contours
+                result: RESULT = self.image_processor.find_result(
+                    mat, config, model, b_origin=False
+                )
+
+                # msgs = result.msg.split("_")
+                # for i, msg in enumerate(msgs):
+                #     print(f"BLOB_{i}: ", msg)
 
                 return result
 
@@ -795,6 +822,15 @@ class MainWindow(QMainWindow):
                 # Find and draw contours
                 result: BLOBS = self.image_processor.find_blobs(
                     mat, config, b_debug=True
+                )
+
+                # print("Time Processing: ", time.time() - time_start)
+                return result
+
+            if process_name == "FindBlobswithYOLO":
+                # Find and draw contours
+                result: BLOBS = self.image_processor.find_blobs_with_yolo(
+                    mat, model, config, b_debug=True
                 )
 
                 # print("Time Processing: ", time.time() - time_start)

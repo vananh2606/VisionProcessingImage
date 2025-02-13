@@ -1,5 +1,7 @@
 import cv2 as cv
 import numpy as np
+import os
+from ultralytics import YOLO
 from collections import namedtuple
 
 BLOBS = namedtuple(
@@ -160,7 +162,7 @@ class ImageProcessor:
                 if box is None:
                     continue
                 x, y, w, h = box
-                color = (0, 255, 0) if roi_index is None else (0, 0, 255)
+                color = (0, 255, 0)
                 cv.rectangle(dst, (x, y), (x + w, y + h), color, 5)
                 cv.putText(
                     dst,
@@ -173,6 +175,74 @@ class ImageProcessor:
                 )
 
         return BLOBS(dst=dst, mbin=mbin, boxes=sorted_boxes, contours=sorted_contours)
+
+    @staticmethod
+    def find_blobs_with_yolo(src, model: YOLO, config: dict = None, b_debug=False):
+        # Get configuration parameters
+        conf_threshold = config.get("detection", {}).get("confidence", 0.25)
+        rows = config.get("rows", 4)
+        columns = config.get("columns", 5)
+        total_boxes = rows * columns
+
+        # Get anchor ROIs from config
+        shapes: dict = config.get("shapes", {})
+        anchor_rois = []
+        if shapes:
+            anchor_rois = [shapes[i]["box"] for i in shapes]
+
+        # Initialize sorted results
+        sorted_boxes = [None] * total_boxes
+        sorted_contours = [None] * total_boxes
+
+        # Run YOLO detection
+        results = model(src, conf=conf_threshold)[0]
+
+        # Process each detection
+        for detection in results.boxes.data:
+            x1, y1, x2, y2, conf, cls = detection
+            x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
+
+            # Convert to x,y,w,h format
+            w = x2 - x1
+            h = y2 - y1
+
+            # Calculate center point
+            center_x = x1 + w // 2
+            center_y = y1 + h // 2
+
+            # Check which ROI this detection belongs to
+            for roi_index, roi in enumerate(anchor_rois):
+                rx, ry, rw, rh = roi
+                if (rx <= center_x <= rx + rw) and (ry <= center_y <= ry + rh):
+                    sorted_boxes[roi_index] = [x1, y1, w, h]
+                    # Create contour from box (if needed)
+                    contour = np.array(
+                        [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+                    ).reshape((-1, 1, 2))
+                    sorted_contours[roi_index] = contour
+                    break
+
+        dst = None
+        if b_debug:
+            dst = src.copy()
+            # Draw detections
+            for i, box in enumerate(sorted_boxes):
+                if box is None:
+                    continue
+                x, y, w, h = box
+                color = (0, 255, 0)  # Green for all detections
+                cv.rectangle(dst, (x, y), (x + w, y + h), color, 5)
+                cv.putText(
+                    dst,
+                    f"BLOB: {i}",
+                    (x, y - 10),
+                    cv.FONT_HERSHEY_SIMPLEX,
+                    1,
+                    color,
+                    2,
+                )
+
+        return BLOBS(dst=dst, mbin=None, boxes=sorted_boxes, contours=sorted_contours)
 
     @staticmethod
     def find_circles(src, roi, config: dict, b_debug=False):
@@ -307,12 +377,15 @@ class ImageProcessor:
         return dx, dy, da
 
     @staticmethod
-    def find_result(src, config: dict, b_origin=False):
+    def find_result(src, config: dict, model: YOLO = None, b_origin=False):
         """
         Find Blobs, Find Circles, Calculate aligment
         """
         # find_blobs
-        blobs: BLOBS = ImageProcessor.find_blobs(src, config)
+        if model is None:
+            blobs = ImageProcessor.find_blobs(src, config)
+        else:
+            blobs: BLOBS = ImageProcessor.find_blobs_with_yolo(src, model, config)
 
         circles = [None] * len(blobs.boxes)
         vectors = [None] * len(blobs.boxes)
@@ -382,7 +455,6 @@ class ImageProcessor:
 
         for i, box in enumerate(boxes):
             if box is None:
-                print(origins)
                 box_origins = origins["shapes"][i]["box"]
                 x, y, w, h = box_origins
                 text_box = f"Boxes{i}: NG"
@@ -490,3 +562,9 @@ class ImageProcessor:
                 else:
                     decision.append(False)
         return "_".join(msg), decision
+
+
+if __name__ == "__main__":
+    image = "capture_1.png"
+
+    ImageProcessor.find_blobs_with_yolo(image)
